@@ -1,6 +1,6 @@
 <!--
 Sync Impact Report
-- Version change: (template) → 1.0.0
+- Version change: 1.0.0 → 1.1.0 (Principle I: judgment rules are confirmable warnings; historical-record purpose)
 - Modified principles: all placeholders replaced (initial ratification)
 - Added sections: Core Principles I–VII, Technology & Architecture Constraints,
   Development Workflow & Quality Gates, Governance
@@ -32,11 +32,13 @@ not a Western "two parents, one spouse" genealogy model:
   through different wives or different husbands are always distinguishable.
 - Lineage (nasab) follows the father. Adoption/fostering (kafala) MUST NOT be stored as
   biological parentage; it is a separate, optional relationship type.
-- Marriages between mahram relatives that the system can detect from the tree (e.g. a man and
-  his mother, sister, daughter, aunt, niece; combining two sisters as concurrent wives) MUST
-  be blocked or, where data is incomplete, flagged for admin review.
+- The product is a **historical record**, not a marriage authority. Structural rules above are
+  hard constraints. Judgment rules (mahram relationships detectable from the tree, combining
+  sisters, iddah, third divorce, implausible dates) MUST produce warnings that an admin confirms;
+  the confirmation is stored with the record.
 
-Rationale: these rules are the reason the product exists. Every other decision is secondary.
+Rationale: these rules are the reason the product exists, and real history must still be
+recordable even when it is messy or incomplete.
 
 ### II. Rules Enforced on the Server, Mirrored on the Clients
 
@@ -69,8 +71,9 @@ app MUST at minimum support browsing, searching, and viewing the tree.
 
 ### VI. Privacy and Role-Based Access
 
-Family data is personal. Roles: **Admin** (edit the tree), **Member** (view), optional
-**Public** (view only non-living or explicitly shared people). Living people's personal
+Family data is personal. Many trees are hosted; roles are per tree: **Owner**, **Admin**
+(edit), **Member** (view). A tree is Private (default) or Public; visitors to a Public tree see
+living people only as "Living person". Living people's personal
 details MUST NOT be visible to unauthenticated users. All edits MUST be audit-logged
 (who, what, when).
 
@@ -106,4 +109,4 @@ principle added or materially expanded; PATCH: wording), and updates to affected
 Every plan MUST pass the Constitution Check before implementation; complexity beyond these
 rules MUST be justified in the plan's Complexity Tracking table.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-06
+**Version**: 1.1.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-06
