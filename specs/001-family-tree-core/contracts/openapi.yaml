@@ -78,7 +78,7 @@ paths:
     get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } } }
   /trees/{treeId}/search:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { name: q, in: query, required: true, schema: { type: string, minLength: 1 } }, { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } } ]
-    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: Matches (Arabic/English, diacritic-insensitive), content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } } } } } } }
+    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: 'Matches (Arabic/English, diacritic-insensitive)', content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } } } } } } }
 
   # ---------- Persons ----------
   /trees/{treeId}/persons:
@@ -89,7 +89,7 @@ paths:
       responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Person' } } } }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/persons/{personId}:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
-    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: Full detail incl. nasab, spouses, children grouped by marriage, content: { application/json: { schema: { $ref: '#/components/schemas/PersonDetail' } } } } } }
+    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: 'Full detail incl. nasab, spouses, children grouped by marriage', content: { application/json: { schema: { $ref: '#/components/schemas/PersonDetail' } } } } } }
     put:
       parameters: [ { $ref: '#/components/parameters/ifMatch' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PersonUpsert' } } } }
@@ -161,7 +161,7 @@ paths:
   /trees/{treeId}/gedcom:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
     get: { responses: { '200': { description: GEDCOM 5.5.1 export, content: { text/plain: { schema: { type: string } } } } } }
-    post: { description: Import into this tree, requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } } }, responses: { '200': { description: Import report (created, violations, auto-acknowledged warnings) } } }
+    post: { description: Import into this tree, requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } } }, responses: { '200': { description: 'Import report (created, violations, auto-acknowledged warnings)' } } }
 
 components:
   securitySchemes:
@@ -285,7 +285,7 @@ components:
         - $ref: '#/components/schemas/Person'
         - type: object
           properties:
-            nasab: { type: array, items: { $ref: '#/components/schemas/PersonSummary' }, description: Father, grandfather, ... }
+            nasab: { type: array, items: { $ref: '#/components/schemas/PersonSummary' }, description: 'Father, grandfather, ...' }
             parents: { type: object, properties: { marriageId: { type: string, format: uuid }, father: { $ref: '#/components/schemas/PersonSummary' }, mother: { $ref: '#/components/schemas/PersonSummary' } } }
             marriages:
               type: array
