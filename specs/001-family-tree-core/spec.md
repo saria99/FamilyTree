@@ -202,7 +202,7 @@ in the history. Open a shared link while signed out and confirm living people sh
   pan, collapse/expand branches, and a person detail view.
 - **FR-021**: Users MUST be able to search people by any name in Arabic or English, ignoring diacritics (tashkeel) and hamza spelling differences.
 - **FR-022**: The whole interface MUST be available in Arabic (right-to-left) and English (left-to-right).
-- **FR-023**: Users MUST be able to view a person-centred view (ancestors up, descendants down) and a whole-tree view.
+- **FR-023**: Users MUST be able to open a person-centred view (ancestors up, descendants down) and a whole-tree view. The ancestor view ("my lineage": father, grandfathers up the nasab chain, and each ancestor's wives) is the default landing view for viewers.
 
 **Access & audit**
 
@@ -243,13 +243,14 @@ in the history. Open a shared link while signed out and confirm living people sh
 
 - Q: Iddah handling? → A: Warn; save after admin confirms.
 - Q: One tree or many? → A: Many separate trees, each with its own Owner, Admins and Members.
+- Q: Purpose? → A: The site is provided so people can see their ancestors; the ancestor view is the primary viewing experience.
 - Q: Signed-out visitors? → A: The product is a historical record, not a marriage tool; it must be flexible enough to show the
   real complexity. Structural rules stay strict; judgment rules (mahram, iddah, third divorce, dates) are confirmable
   warnings. Visibility is per tree (Private default / Public), living people always hidden from visitors.
 
 ## Assumptions
 
-- Purpose: a historical genealogy record. The system records what happened and highlights possible inconsistencies; it does not issue religious rulings.
+- Purpose: let family members see their ancestors (and how branches connect through multiple wives and sequential husbands). A historical genealogy record. The system records what happened and highlights possible inconsistencies; it does not issue religious rulings.
 
 - Admins are trusted family members; there is no approval workflow for edits in this release (history and undo are the safety net).
 - Gender is binary (male/female) as required by Islamic marriage rules.
