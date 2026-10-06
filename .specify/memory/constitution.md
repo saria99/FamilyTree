@@ -1,50 +1,109 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: (template) → 1.0.0
+- Modified principles: all placeholders replaced (initial ratification)
+- Added sections: Core Principles I–VII, Technology & Architecture Constraints,
+  Development Workflow & Quality Gates, Governance
+- Removed sections: none
+- Templates requiring updates:
+  ✅ .specify/templates/plan-template.md (Constitution Check reads gates from this file; no edit needed)
+  ✅ .specify/templates/spec-template.md (no mandatory section changes)
+  ✅ .specify/templates/tasks-template.md (test-first + domain-rule tasks fit existing categories)
+- Follow-up TODOs: none
+-->
+
+# Madinah Family Tree Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Islamic Family Law Is the Domain Model (NON-NEGOTIABLE)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+The data model and validation rules MUST reflect Islamic marriage and lineage (nasab) rules,
+not a Western "two parents, one spouse" genealogy model:
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- A man MAY have up to **four** wives whose marriages overlap in time. A fifth concurrent
+  marriage MUST be rejected.
+- A woman MUST have at most **one** husband at any point in time. She MAY marry again
+  **in sequence** after divorce or the husband's death. Overlapping marriage periods for a
+  woman MUST be rejected.
+- A marriage is a first-class entity (husband, wife, start date, end date, end reason:
+  divorce / death / annulment (faskh) / ongoing). Marriages are never inferred from children.
+- Every child belongs to exactly one marriage (a specific father **and** mother), so half-siblings
+  through different wives or different husbands are always distinguishable.
+- Lineage (nasab) follows the father. Adoption/fostering (kafala) MUST NOT be stored as
+  biological parentage; it is a separate, optional relationship type.
+- Marriages between mahram relatives that the system can detect from the tree (e.g. a man and
+  his mother, sister, daughter, aunt, niece; combining two sisters as concurrent wives) MUST
+  be blocked or, where data is incomplete, flagged for admin review.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Rationale: these rules are the reason the product exists. Every other decision is secondary.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Rules Enforced on the Server, Mirrored on the Clients
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+All relationship rules from Principle I MUST be enforced in the .NET domain layer and by
+PostgreSQL constraints where expressible (e.g. exclusion constraints on overlapping date
+ranges). React and React Native clients MAY pre-validate for fast feedback but MUST NOT be
+the only line of defense. Validation errors MUST be returned as structured problem details
+with a machine-readable code so both clients can show the same message (Arabic and English).
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Test-First for Domain Rules
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Every marriage, parentage, and mahram rule MUST have automated tests written before or with
+its implementation, covering the allowed case and the rejected case (e.g. 4th wife allowed,
+5th concurrent wife rejected; remarriage after divorce allowed, overlapping husband rejected).
+API endpoints MUST have integration tests against a real PostgreSQL (Testcontainers).
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### IV. Visual, Forgiving Tree Editing
+
+Admins build the tree visually: add people by typing, connect them by drag-and-drop, and edit
+inline. Every visual action maps to an explicit API command (CreatePerson, CreateMarriage,
+AddChildToMarriage, EndMarriage, ...). Invalid drops MUST be rejected with a clear reason, not
+silently ignored. Destructive operations MUST be undoable or require confirmation.
+
+### V. One API, Two Clients
+
+A single versioned REST API (`/api/v1`) serves the React web app and the React Native app.
+Shared TypeScript types and validation messages MUST be generated from or kept in a shared
+package, not hand-copied between clients. The web app is the primary admin editor; the mobile
+app MUST at minimum support browsing, searching, and viewing the tree.
+
+### VI. Privacy and Role-Based Access
+
+Family data is personal. Roles: **Admin** (edit the tree), **Member** (view), optional
+**Public** (view only non-living or explicitly shared people). Living people's personal
+details MUST NOT be visible to unauthenticated users. All edits MUST be audit-logged
+(who, what, when).
+
+### VII. Simplicity and Bilingual (RTL) Support
+
+Start with the simplest design that satisfies the rules (YAGNI): one database, one API, no
+microservices. The UI MUST support Arabic (RTL) and English (LTR) from the first release,
+including Arabic names (ism, nasab chain "ibn/bint", laqab, kunya).
+
+## Technology & Architecture Constraints
+
+- Backend: .NET (C#, latest LTS/current SDK installed), ASP.NET Core Web API, EF Core with
+  Npgsql, Clean Architecture layers (Domain, Application, Infrastructure, Api).
+- Database: PostgreSQL. Schema changes only via EF Core migrations.
+- Web: React + TypeScript (Vite). Tree canvas via a graph library that supports custom nodes
+  and drag-and-drop (e.g. React Flow) with automatic layout.
+- Mobile: React Native (Expo) + TypeScript.
+- Auth: JWT bearer tokens issued by the API (ASP.NET Core Identity).
+- Source control: Git, hosted on GitHub; Spec-Driven Development with GitHub Spec Kit.
+
+## Development Workflow & Quality Gates
+
+- Every feature follows: specify → clarify → plan → tasks → implement.
+- A feature is done only when: domain tests pass, API integration tests pass, the web
+  editor reflects the rule, and the Constitution Check in the plan has no unjustified violations.
+- Pull requests MUST describe which principles they touch and how they were verified.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes other practices. Amendments require an edit to this file with a
+Sync Impact Report, a semantic version bump (MAJOR: principle removed/redefined; MINOR:
+principle added or materially expanded; PATCH: wording), and updates to affected templates.
+Every plan MUST pass the Constitution Check before implementation; complexity beyond these
+rules MUST be justified in the plan's Complexity Tracking table.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-06
