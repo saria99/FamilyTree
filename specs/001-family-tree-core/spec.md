@@ -244,6 +244,7 @@ in the history. Open a shared link while signed out and confirm living people sh
 - Q: Iddah handling? → A: Warn; save after admin confirms.
 - Q: One tree or many? → A: Many separate trees, each with its own Owner, Admins and Members.
 - Q: Purpose? → A: The site is provided so people can see their ancestors; the ancestor view is the primary viewing experience.
+- Q: Who edits where? → A: Admins edit through the web app; users view from the mobile app.
 - Q: Signed-out visitors? → A: The product is a historical record, not a marriage tool; it must be flexible enough to show the
   real complexity. Structural rules stay strict; judgment rules (mahram, iddah, third divorce, dates) are confirmable
   warnings. Visibility is per tree (Private default / Public), living people always hidden from visitors.
@@ -258,6 +259,6 @@ in the history. Open a shared link while signed out and confirm living people sh
 - Mahram checks are limited to what the recorded data proves. Missing links mean no block.
 - The triple-divorce rule (no remarriage to the same wife after a third divorce without an intervening marriage) is a warning,
   because older records are often incomplete.
-- Mobile app scope in this release is viewing and searching. Full editing is on the web.
+- Editing is done only by admins on the web app. The mobile app is for users to view and search (no editing).
 - Hijri and Gregorian dates are both stored and converted for display. Exact day conversion may vary by one day, which is acceptable.
 - Email delivery is available for invitations and password resets.
