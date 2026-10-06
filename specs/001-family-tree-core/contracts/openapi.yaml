@@ -1,0 +1,401 @@
+openapi: 3.1.0
+info:
+  title: Madinah Family Tree API
+  version: 1.0.0
+  description: |
+    Single API for the React admin editor (web) and the React Native viewer (mobile).
+    Rule results: 422 = violation (never saved), 409 = warnings (re-submit with acknowledgedWarnings).
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+
+paths:
+  # ---------- Auth ----------
+  /auth/register:
+    post:
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/Tokens' }, '400': { $ref: '#/components/responses/Problem' } }
+  /auth/login:
+    post:
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } } }
+      responses: { '200': { $ref: '#/components/responses/Tokens' }, '401': { $ref: '#/components/responses/Problem' } }
+  /auth/refresh:
+    post:
+      security: []
+      description: Refresh token from HttpOnly cookie (web) or body (mobile). Rotates the refresh token.
+      requestBody: { content: { application/json: { schema: { type: object, properties: { refreshToken: { type: string } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Tokens' }, '401': { $ref: '#/components/responses/Problem' } }
+  /auth/logout:
+    post: { responses: { '204': { description: Revoked } } }
+  /me:
+    get:
+      responses: { '200': { description: Current user and tree memberships, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } } }
+
+  # ---------- Trees & membership ----------
+  /trees:
+    get: { responses: { '200': { description: Trees the user belongs to, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Tree' } } } } } } }
+    post:
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TreeUpsert' } } } }
+      responses: { '201': { description: Created; caller becomes Owner, content: { application/json: { schema: { $ref: '#/components/schemas/Tree' } } } } }
+  /trees/{treeId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Tree' } } } }, '404': { $ref: '#/components/responses/Problem' } } }
+    put: { description: Owner only, requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/TreeUpsert' } } } }, responses: { '200': { description: Updated } } }
+    delete: { description: Owner only, responses: { '204': { description: Deleted } } }
+  /trees/{treeId}/members:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    get: { responses: { '200': { description: Members, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Member' } } } } } } }
+  /trees/{treeId}/members/{userId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: userId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch: { description: Owner changes role or linked person, requestBody: { content: { application/json: { schema: { type: object, properties: { role: { $ref: '#/components/schemas/Role' }, linkedPersonId: { type: [string, 'null'], format: uuid } } } } } }, responses: { '200': { description: Updated } } }
+    delete: { description: Remove access, responses: { '204': { description: Removed } } }
+  /trees/{treeId}/invitations:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      requestBody: { content: { application/json: { schema: { type: object, required: [email, role], properties: { email: { type: string, format: email }, role: { $ref: '#/components/schemas/Role' } } } } } }
+      responses: { '201': { description: Invitation emailed } }
+  /invitations/{token}/accept:
+    post: { parameters: [ { name: token, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: Membership created } } }
+
+  # ---------- Read: graph & views ----------
+  /trees/{treeId}/graph:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    get:
+      security: [ {}, { bearer: [] } ]
+      description: Compact whole-tree payload (persons + marriages + kinship links). Living people redacted for anonymous viewers of Public trees.
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } }
+  /trees/{treeId}/persons/{personId}/ancestors:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' }, { name: depth, in: query, schema: { type: integer, default: 10, maximum: 40 } } ]
+    get:
+      security: [ {}, { bearer: [] } ]
+      description: Ancestor view (mobile landing). Paternal nasab chain plus maternal lines, with each ancestor's marriages.
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } }
+  /trees/{treeId}/persons/{personId}/descendants:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' }, { name: depth, in: query, schema: { type: integer, default: 3, maximum: 10 } } ]
+    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } } }
+  /trees/{treeId}/search:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: q, in: query, required: true, schema: { type: string, minLength: 1 } }, { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } } ]
+    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: Matches (Arabic/English, diacritic-insensitive), content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } } } } } } }
+
+  # ---------- Persons ----------
+  /trees/{treeId}/persons:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      description: Admin. Optionally sets parentMarriageId (add as child).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PersonUpsert' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Person' } } } }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/persons/{personId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
+    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: Full detail incl. nasab, spouses, children grouped by marriage, content: { application/json: { schema: { $ref: '#/components/schemas/PersonDetail' } } } } } }
+    put:
+      parameters: [ { $ref: '#/components/parameters/ifMatch' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PersonUpsert' } } } }
+      responses: { '200': { description: Updated }, '409': { $ref: '#/components/responses/Warnings' }, '412': { description: Version conflict }, '422': { $ref: '#/components/responses/Violation' } }
+    delete:
+      parameters: [ { name: cascade, in: query, schema: { type: string, enum: [none, detach], default: none } } ]
+      responses: { '204': { description: Soft-deleted }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/persons/{personId}/restore:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
+    post: { description: Undo of delete, responses: { '200': { description: Restored } } }
+  /trees/{treeId}/persons/{personId}/parent-marriage:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
+    put:
+      description: Drag person onto a union node. Set or clear (null) the biological parent marriage.
+      requestBody: { content: { application/json: { schema: { type: object, properties: { marriageId: { type: [string, 'null'], format: uuid }, acknowledgedWarnings: { $ref: '#/components/schemas/AckList' } } } } } }
+      responses: { '200': { description: Linked }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/persons/{personId}/merge:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
+    post: { description: Merge duplicate into this person, requestBody: { content: { application/json: { schema: { type: object, required: [duplicateId], properties: { duplicateId: { type: string, format: uuid } } } } } }, responses: { '200': { description: Merged }, '422': { $ref: '#/components/responses/Violation' } } }
+
+  # ---------- Marriages ----------
+  /trees/{treeId}/marriages:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      description: Drag person onto person. Enforces 4-wives / one-husband; mahram & iddah → warnings.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Marriage' } } } }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/marriages/{marriageId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: marriageId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      parameters: [ { $ref: '#/components/parameters/ifMatch' } ]
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }
+      responses: { '200': { description: Updated }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+    delete: { description: Refused while it has children unless cascade=detach, responses: { '204': { description: Soft-deleted } } }
+  /trees/{treeId}/marriages/{marriageId}/restore:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: marriageId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post: { responses: { '200': { description: Restored } } }
+
+  # ---------- Kinship links (kafala, milk) ----------
+  /trees/{treeId}/kinship-links:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post: { requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/KinshipLink' } } } }, responses: { '201': { description: Created } } }
+  /trees/{treeId}/kinship-links/{linkId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: linkId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    delete: { responses: { '204': { description: Deleted } } }
+
+  # ---------- Editor helpers ----------
+  /trees/{treeId}/validate/marriage:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post: { description: Dry-run during drag (nothing saved), requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }, responses: { '200': { description: Rule results, content: { application/json: { schema: { $ref: '#/components/schemas/RuleResults' } } } } } }
+  /trees/{treeId}/validate/parent-marriage:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post: { requestBody: { content: { application/json: { schema: { type: object, required: [personId, marriageId], properties: { personId: { type: string, format: uuid }, marriageId: { type: string, format: uuid } } } } } }, responses: { '200': { description: Rule results, content: { application/json: { schema: { $ref: '#/components/schemas/RuleResults' } } } } } }
+  /trees/{treeId}/lineage/parse:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      description: 'Quick entry, e.g. "فاطمة بنت محمد بن عبدالله" or "Fatimah bint Muhammad ibn Abdullah". Returns each segment with existing-person candidates.'
+      requestBody: { content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string } } } } } }
+      responses: { '200': { description: Parsed chain, content: { application/json: { schema: { $ref: '#/components/schemas/LineageParse' } } } } }
+  /trees/{treeId}/lineage/commit:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      description: Create/link the chain with the admin's choice per segment (existing id or new). Creates father→child links via placeholder-wife marriages when mother unknown.
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/LineageCommit' } } } }
+      responses: { '201': { description: Created ids }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/history:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: before, in: query, schema: { type: string, format: date-time } }, { name: entityId, in: query, schema: { type: string, format: uuid } } ]
+    get: { responses: { '200': { description: Change records, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChangeRecord' } } } } } } }
+  /trees/{treeId}/gedcom:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    get: { responses: { '200': { description: GEDCOM 5.5.1 export, content: { text/plain: { schema: { type: string } } } } } }
+    post: { description: Import into this tree, requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } } }, responses: { '200': { description: Import report (created, violations, auto-acknowledged warnings) } } }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    treeId: { name: treeId, in: path, required: true, schema: { type: string, format: uuid } }
+    personId: { name: personId, in: path, required: true, schema: { type: string, format: uuid } }
+    ifMatch: { name: If-Match, in: header, required: false, schema: { type: string }, description: Row version for optimistic concurrency }
+  responses:
+    Tokens: { description: Tokens, content: { application/json: { schema: { $ref: '#/components/schemas/Tokens' } } } }
+    Problem: { description: Problem details, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Violation: { description: A hard rule was broken; nothing saved, content: { application/problem+json: { schema: { $ref: '#/components/schemas/RuleProblem' } } } }
+    Warnings: { description: Warnings need acknowledgement; nothing saved yet, content: { application/problem+json: { schema: { $ref: '#/components/schemas/RuleProblem' } } } }
+  schemas:
+    Role: { type: string, enum: [Owner, Admin, Member] }
+    Gender: { type: string, enum: [Male, Female] }
+    Calendar: { type: string, enum: [Gregorian, Hijri] }
+    PartialDate:
+      type: object
+      properties:
+        calendar: { $ref: '#/components/schemas/Calendar' }
+        year: { type: [integer, 'null'] }
+        month: { type: [integer, 'null'], minimum: 1, maximum: 12 }
+        day: { type: [integer, 'null'], minimum: 1, maximum: 31 }
+        approximate: { type: boolean, default: false }
+        earliest: { type: [string, 'null'], format: date, readOnly: true }
+        latest: { type: [string, 'null'], format: date, readOnly: true }
+    AckList: { type: array, items: { type: string }, description: Warning codes the admin confirmed }
+    RuleResult:
+      type: object
+      required: [code, severity, message]
+      properties:
+        code: { type: string, example: MAX_CONCURRENT_WIVES }
+        severity: { type: string, enum: [Violation, Warning] }
+        message: { type: object, properties: { ar: { type: string }, en: { type: string } } }
+        personIds: { type: array, items: { type: string, format: uuid } }
+        relation: { type: [string, 'null'], example: "wife's sister" }
+    RuleResults: { type: object, properties: { results: { type: array, items: { $ref: '#/components/schemas/RuleResult' } } } }
+    Problem:
+      type: object
+      properties: { type: { type: string }, title: { type: string }, status: { type: integer }, detail: { type: string }, code: { type: string } }
+    RuleProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { results: { type: array, items: { $ref: '#/components/schemas/RuleResult' } } }
+    RegisterRequest: { type: object, required: [email, password, displayName], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 }, displayName: { type: string } } }
+    LoginRequest: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } }
+    Tokens: { type: object, properties: { accessToken: { type: string }, expiresIn: { type: integer }, refreshToken: { type: string, description: Mobile only; web receives an HttpOnly cookie } } }
+    Me:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        displayName: { type: string }
+        memberships: { type: array, items: { type: object, properties: { treeId: { type: string, format: uuid }, role: { $ref: '#/components/schemas/Role' }, linkedPersonId: { type: [string, 'null'], format: uuid } } } }
+    Tree:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nameAr: { type: [string, 'null'] }
+        nameEn: { type: [string, 'null'] }
+        visibility: { type: string, enum: [Private, Public] }
+        rootPersonId: { type: [string, 'null'], format: uuid }
+        myRole: { oneOf: [ { $ref: '#/components/schemas/Role' }, { type: 'null' } ] }
+    TreeUpsert:
+      type: object
+      properties:
+        nameAr: { type: string }
+        nameEn: { type: string }
+        visibility: { type: string, enum: [Private, Public] }
+        rootPersonId: { type: [string, 'null'], format: uuid }
+        iddahDivorceDays: { type: integer }
+        iddahWidowDays: { type: integer }
+    Member: { type: object, properties: { userId: { type: string, format: uuid }, email: { type: string }, displayName: { type: string }, role: { $ref: '#/components/schemas/Role' }, linkedPersonId: { type: [string, 'null'], format: uuid } } }
+    PersonUpsert:
+      type: object
+      required: [gender]
+      properties:
+        gender: { $ref: '#/components/schemas/Gender' }
+        ismAr: { type: [string, 'null'] }
+        ismEn: { type: [string, 'null'] }
+        laqabAr: { type: [string, 'null'] }
+        laqabEn: { type: [string, 'null'] }
+        kunyaAr: { type: [string, 'null'] }
+        kunyaEn: { type: [string, 'null'] }
+        familyNameAr: { type: [string, 'null'] }
+        familyNameEn: { type: [string, 'null'] }
+        birth: { $ref: '#/components/schemas/PartialDate' }
+        birthPlace: { type: [string, 'null'] }
+        death: { $ref: '#/components/schemas/PartialDate' }
+        deathPlace: { type: [string, 'null'] }
+        isLiving: { type: boolean }
+        parentMarriageId: { type: [string, 'null'], format: uuid }
+        notes: { type: [string, 'null'] }
+        acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
+    Person:
+      allOf:
+        - $ref: '#/components/schemas/PersonUpsert'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            version: { type: string }
+            redacted: { type: boolean }
+            flags: { type: array, items: { type: string }, description: Acknowledged warning codes }
+    PersonSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        displayNameAr: { type: [string, 'null'] }
+        displayNameEn: { type: [string, 'null'] }
+        nasabAr: { type: [string, 'null'], example: "محمد بن عبدالله بن عبدالمطلب" }
+        nasabEn: { type: [string, 'null'], example: "Muhammad ibn Abdullah ibn Abd al-Muttalib" }
+        gender: { $ref: '#/components/schemas/Gender' }
+        birthYear: { type: [integer, 'null'] }
+        deathYear: { type: [integer, 'null'] }
+        isLiving: { type: boolean }
+        redacted: { type: boolean }
+    PersonDetail:
+      allOf:
+        - $ref: '#/components/schemas/Person'
+        - type: object
+          properties:
+            nasab: { type: array, items: { $ref: '#/components/schemas/PersonSummary' }, description: Father, grandfather, ... }
+            parents: { type: object, properties: { marriageId: { type: string, format: uuid }, father: { $ref: '#/components/schemas/PersonSummary' }, mother: { $ref: '#/components/schemas/PersonSummary' } } }
+            marriages:
+              type: array
+              description: Ordered by start date; each with its own children
+              items:
+                type: object
+                properties:
+                  marriage: { $ref: '#/components/schemas/Marriage' }
+                  spouse: { $ref: '#/components/schemas/PersonSummary' }
+                  children: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } }
+            kinshipLinks: { type: array, items: { $ref: '#/components/schemas/KinshipLink' } }
+    MarriageUpsert:
+      type: object
+      properties:
+        husbandId: { type: [string, 'null'], format: uuid }
+        wifeId: { type: [string, 'null'], format: uuid }
+        start: { $ref: '#/components/schemas/PartialDate' }
+        end: { $ref: '#/components/schemas/PartialDate' }
+        endReason: { type: string, enum: [Ongoing, Divorce, Khul, Annulment, DeathOfHusband, DeathOfWife, Unknown] }
+        divorceKind: { type: [string, 'null'], enum: [Revocable, IrrevocableMinor, IrrevocableMajor, null] }
+        divorceCount: { type: [integer, 'null'], minimum: 1, maximum: 3 }
+        notes: { type: [string, 'null'] }
+        acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
+    Marriage:
+      allOf:
+        - $ref: '#/components/schemas/MarriageUpsert'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            version: { type: string }
+            sequenceForHusband: { type: integer }
+            flags: { type: array, items: { type: string } }
+    KinshipLink:
+      type: object
+      required: [kind, personId, relatedPersonId]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        kind: { type: string, enum: [Guardianship, MilkMother, MilkFather] }
+        personId: { type: string, format: uuid }
+        relatedPersonId: { type: string, format: uuid }
+        start: { $ref: '#/components/schemas/PartialDate' }
+        end: { $ref: '#/components/schemas/PartialDate' }
+        notes: { type: [string, 'null'] }
+    TreeGraph:
+      type: object
+      description: Compact payload for layout. Field names short on purpose.
+      properties:
+        persons:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              g: { type: string, enum: [M, F] }
+              ar: { type: [string, 'null'] }
+              en: { type: [string, 'null'] }
+              by: { type: [integer, 'null'], description: birth year }
+              dy: { type: [integer, 'null'], description: death year }
+              l: { type: boolean, description: living }
+              pm: { type: [string, 'null'], description: parent marriage id }
+              r: { type: boolean, description: redacted }
+              f: { type: boolean, description: has acknowledged warnings }
+        marriages:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              h: { type: [string, 'null'] }
+              w: { type: [string, 'null'] }
+              sy: { type: [integer, 'null'], description: start year }
+              ey: { type: [integer, 'null'], description: end year }
+              er: { type: string, description: end reason }
+              s: { type: integer, description: sequence for husband }
+              f: { type: boolean }
+        links:
+          type: array
+          items: { type: object, properties: { id: { type: string }, k: { type: string }, p: { type: string }, rp: { type: string } } }
+    LineageParse:
+      type: object
+      properties:
+        segments:
+          type: array
+          description: Index 0 is the subject; each next one is the father of the previous
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              gender: { $ref: '#/components/schemas/Gender' }
+              candidates: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } }
+    LineageCommit:
+      type: object
+      properties:
+        segments:
+          type: array
+          items:
+            type: object
+            properties:
+              existingPersonId: { type: [string, 'null'], format: uuid }
+              newPerson: { oneOf: [ { $ref: '#/components/schemas/PersonUpsert' }, { type: 'null' } ] }
+        acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
+    ChangeRecord:
+      type: object
+      properties:
+        id: { type: integer }
+        at: { type: string, format: date-time }
+        user: { type: object, properties: { id: { type: string }, displayName: { type: string } } }
+        entityType: { type: string }
+        entityId: { type: string, format: uuid }
+        action: { type: string, enum: [create, update, delete, restore] }
+        before: { type: [object, 'null'] }
+        after: { type: [object, 'null'] }
+        correlationId: { type: string, format: uuid }
