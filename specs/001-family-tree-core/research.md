@@ -1,6 +1,7 @@
-# Research: Islamic Family Tree — Core
+# Research: Bayrab Genealogy — Core Platform
 
-**Feature**: 001-family-tree-core | **Date**: 2026-10-06
+**Feature**: 001-family-tree-core | **Date**: 2026-10-06 | **Revised**: 2026-10-17 (Bayrab elaboration R17–R27,
+analysis fixes C1, C2, D1, I1, U1, U2, G1–G5)
 
 Each item: Decision / Rationale / Alternatives considered.
 
@@ -23,12 +24,17 @@ Each item: Decision / Rationale / Alternatives considered.
     **certain period** = `daterange(start_latest, end_earliest)` (the interval during which the marriage was
     *definitely* in force). It is NULL when dates are too vague to prove anything.
   - **Woman, one husband at a time**: PostgreSQL **exclusion constraint**
-    `EXCLUDE USING gist (wife_id WITH =, certain_period WITH &&) WHERE (certain_period IS NOT NULL AND deleted_at IS NULL)`
+    `EXCLUDE USING gist (tree_id WITH =, wife_id WITH =, certain_period WITH &&) WHERE (certain_period IS NOT NULL AND deleted_at IS NULL AND verification_status <> 'Disputed')`
     (needs `btree_gist`). The domain checks the same thing first for a friendly error; the constraint is the backstop.
   - **Man, max four**: cannot be expressed as an exclusion constraint. Enforced in the domain service inside a
     transaction that first takes `SELECT ... FOR UPDATE` on the husband's `person` row, then counts marriages
     whose certain periods overlap the new one at any instant (sweep over start/end points, max concurrency ≤ 4).
   - If overlap is only *possible* (vague dates), the rule degrades to a warning (FR-009).
+  - **Disputed marriages** are excluded from both hard limits (constitution v1.2.0, Principle I); a disputed
+    marriage that would break a limit yields the warning `DISPUTED_EXCEEDS_LIMIT` instead.
+  - **Fifth wife during iddah** (FR-044): when counting concurrency for a husband, each marriage that ended by his
+    divorce is extended by the tree's divorce-iddah days. Overlap that exists only because of that extension yields
+    the warning `FIFTH_WIFE_DURING_IDDAH`, not a violation.
 - **Rationale**: Constitution Principle II (enforce in server and DB where expressible). Row lock serialises
   concurrent admin edits on the same man.
 - **Alternatives**: Trigger counting wives → harder to test and to return structured errors; kept as an
@@ -38,10 +44,12 @@ Each item: Decision / Rationale / Alternatives considered.
 
 - **Decision**: Two classes of rule results:
   - **Violations** (always refused, HTTP 422): `MAX_CONCURRENT_WIVES`, `WIFE_HAS_HUSBAND`, `SAME_GENDER_MARRIAGE`,
-    `ANCESTOR_CYCLE`, `CHILD_HAS_PARENTS`, `CROSS_TREE_LINK`.
+    `ANCESTOR_CYCLE`, `CHILD_HAS_PARENTS` (already has a *preferred* parentage), `DUPLICATE_PARENTAGE_CLAIM`,
+    `CHILD_BORN_BEFORE_PARENT`, `DEATH_BEFORE_BIRTH`, `VERIFIED_REQUIRES_SOURCE`, `PERSON_HAS_LINKS`, `CROSS_TREE_LINK`.
   - **Warnings** (HTTP 409 with list; client re-submits with `acknowledgedWarnings: [code,...]`): `MAHRAM_BLOOD`,
     `MAHRAM_MARRIAGE`, `MAHRAM_MILK`, `FORBIDDEN_COMBINATION` (sisters / woman + aunt), `IDDAH_OVERLAP`,
-    `THIRD_DIVORCE`, `POSSIBLE_OVERLAP`, `BIRTH_OUTSIDE_MARRIAGE_PERIOD`, `PARENT_TOO_YOUNG`.
+    `FIFTH_WIFE_DURING_IDDAH`, `DISPUTED_EXCEEDS_LIMIT`, `THIRD_DIVORCE`, `POSSIBLE_OVERLAP`,
+    `BIRTH_OUTSIDE_MARRIAGE_PERIOD`, `PARENT_TOO_YOUNG`, `SOURCE_IN_USE`.
   - Acknowledged warnings are stored in `rule_acknowledgement` (who, when, code, message) and shown as a flag.
 - **Rationale**: Clarification session 2026-10-06 and constitution v1.1.0 — historical record, flexible.
 - **Alternatives**: Everything as warnings → loses the structural guarantees the user asked for; rejected.
@@ -96,9 +104,12 @@ Each item: Decision / Rationale / Alternatives considered.
 ## R9. Living-person redaction and public trees
 
 - **Decision**: Redaction happens **in the API projection layer**, never in clients. For anonymous viewers of a
-  Public tree, a person with `is_living = true` (or no death date and birth within 100 years / unknown birth with
-  living descendants unknown → treated as living) is returned as `{ id, displayName: "Living person", redacted: true }`
-  with structural links kept so the tree shape stays intact.
+  Public tree, a person is treated as living when `is_living = true`, or when there is no death date and the birth is
+  unknown or less than 100 years ago. Such a person is returned as `{ id, displayName: "Living person", redacted: true }`
+  with structural links kept so the tree shape stays intact. The same `Redactor` runs on PDFs, exports, search,
+  citations and attachment downloads.
+- **Ordering (analysis fix C1)**: the `Redactor` and its tests are part of the foundation. Until it exists, the
+  authorization policy refuses all anonymous access, so no build can ever expose living people.
 - **Rationale**: Principle VI; clients cannot leak what they never receive.
 
 ## R10. Visual editor (web)
@@ -150,8 +161,12 @@ Each item: Decision / Rationale / Alternatives considered.
 - **Decision**: GEDCOM 5.5.1 import/export implemented in Infrastructure (small line-based parser/writer, no
   dependency). `INDI` ↔ Person, `FAM` ↔ Marriage (`HUSB`, `WIFE`, `MARR`, `DIV`, `CHIL`). Islamic extras via
   underscore tags: `_ENDR` (end reason), `_DIVT` (divorce type), `_KAFA` (guardianship), `_MILK` (milk kinship),
-  `_ACK` (acknowledged warning). Import runs all rules; violations are reported, warnings auto-acknowledged as
-  "imported" so legacy data loads.
+  `_ACK` (acknowledged warning), `_VSTAT`/`_CONF` (status, confidence), `_PREF` (preferred parentage), `_BYRID`
+  (person identifier). Sources map to `SOUR` records and citations to `SOUR` sub-structures with `PAGE`/`TEXT`.
+  Alternative parentage claims are written as additional `FAMC` links carrying `_PREF N`.
+- **Import (analysis fix U2)**: same pipeline as spreadsheets (R25): parse → staged preview → commit. Records that
+  break a structural rule are rejected and listed; the people they mention are still imported; warnings are
+  acknowledged with source `import`.
 - **Rationale**: FR-019, SC-006 round-trip.
 
 ## R16. Large-tree performance
@@ -160,3 +175,125 @@ Each item: Decision / Rationale / Alternatives considered.
   union links) — ~150 bytes/person, ~0.75 MB for 5k people before gzip/Brotli. Person-centred endpoints
   (`/ancestors`, `/descendants?depth=`) for mobile. Web collapses branches beyond 4 generations from the focus person.
 - **Rationale**: SC-004 (5k people usable in <3 s on mid-range phone).
+
+## R17. Parentage claims (competing claims, one preferred)
+
+- **Decision**: Replace `person.parent_marriage_id` with a `parentage_claim` table
+  (`child_id`, `marriage_id`, `is_preferred`, verification status, confidence). A partial unique index
+  `(tree_id, child_id) WHERE is_preferred AND deleted_at IS NULL` guarantees at most one preferred parentage
+  (FR-010), and a unique index on `(child_id, marriage_id)` blocks duplicate claims. All lineage queries (nasab,
+  ancestors, descendants, branches, cycle checks) follow preferred claims; the cycle check also walks alternative
+  claims, since a cycle is impossible either way. Adding an alternative claim sets every claim of that child to
+  Disputed unless the admin chooses otherwise (FR-031).
+- **Rationale**: Clarification 2026-10-17. Keeps lineage queries a single indexed join while storing every account.
+- **Alternatives**: Keep `parent_marriage_id` plus a side table of alternatives → two sources of truth; rejected.
+  A generic assertion/evidence model (GEDCOM-X style) → far more complex than needed; rejected (Principle VII).
+
+## R18. Verification status, confidence and "Verified needs a source"
+
+- **Decision**: `verification_status` (Verified, OralAccount, Disputed, Unconfirmed) and `confidence` (High, Medium,
+  Low) columns on `marriage`, `parentage_claim` and `kinship_link`; default Unconfirmed / Low. The domain refuses
+  `VERIFIED_REQUIRES_SOURCE`. A `DEFERRABLE INITIALLY DEFERRED` constraint trigger is the database backstop: at
+  commit, every Verified row must have at least one citation. Deleting a source cited by Verified relationships
+  returns `SOURCE_IN_USE`; on acknowledgement, relationships left without a citation drop to Unconfirmed in the same
+  transaction, and each change is audited.
+- **Rationale**: Constitution VIII (non-negotiable) plus Principle II (DB backstop where expressible).
+- **Alternatives**: Domain-only check → bulk imports or future code paths could bypass it; rejected.
+
+## R19. Sources, citations, attachments and photos
+
+- **Decision**:
+  - `source`: type (Document, Book, OfficialRecord, Gravestone, Photo, Website, OralAccount, Other), title,
+    author, date (PartialDate), repository, reference/URL, notes. For oral accounts: `narrator_person_id` or
+    `narrator_name`, `told_on`, `recorded_by`.
+  - `citation`: source plus **exactly one** target via nullable FKs `marriage_id | parentage_claim_id |
+    kinship_link_id | person_id` (with `fact` = Name/Birth/Death/General for person targets), CHECK that exactly one
+    is set; `detail` (page/folio) and `quotation`.
+  - `stored_file`: attachments **and person photos** (fixes G1) behind an `IFileStore` interface. v1 implementation
+    stores files on a local disk volume (`/data/files/{treeId}/{fileId}`). Downloads go through an authorized API
+    endpoint that applies the `Redactor`, never a public URL. Limit: 25 MB per file (configurable); allowed types:
+    image/*, application/pdf, audio/*.
+- **Rationale**: Real FKs keep integrity (no polymorphic string ids); disk is the simplest store (Principle VII).
+- **Alternatives**: S3/MinIO now → extra service to run; the interface makes it a later drop-in. Storing files
+  in PostgreSQL `bytea` → bloats backups; rejected.
+
+## R20. Permanent person identifiers
+
+- **Decision**: `family_tree.id_prefix` (e.g. `BYR`, set at tree creation, immutable) and
+  `family_tree.next_person_number`. On person creation the tree row is locked (`SELECT … FOR UPDATE`) and the counter
+  incremented in the same transaction; `person.public_id = prefix + '-' + lpad(n, 6, '0')`, unique per tree, never
+  reused (soft delete keeps the row). Search matches the identifier exactly; imports match on it first.
+- **Rationale**: FR-035 and Principle IX. Gap-free, readable, stable.
+- **Alternatives**: A PostgreSQL sequence per tree → sequences don't scale to many trees; UUID only → not human-friendly.
+
+## R21. Maternal line and branches
+
+- **Decision**:
+  - **Maternal line**: recursive CTE following the preferred claim → `marriage.wife_id`, returned as a list in which
+    each mother carries her own nasab.
+  - **Branch**: `branch(name_ar, name_en, root_person_id | root_marriage_id, include_spouses)`; CHECK exactly one
+    root. Membership is **computed** (recursive CTE over preferred claims), not stored, so it can never go stale. A
+    person can belong to several branches (through the father and the mother). For filter-heavy views the API
+    returns membership as a bitmask per person in the graph payload.
+- **Rationale**: FR-036/FR-037. At 50k people, a descendant CTE over indexed claims runs in milliseconds.
+- **Alternatives**: Stored membership table → must be rebuilt on every lineage edit; rejected.
+
+## R22. Status visual language (shared)
+
+- **Decision**: One style table in `packages/shared/src/status/styles.ts`, mirrored in C# for PDFs: Verified = solid,
+  Oral account = long dash, Disputed = red dotted, Unconfirmed = grey thin dashed. The confidence level sets the line
+  weight (High 2.5, Medium 1.75, Low 1). Each status also has a badge icon, so meaning never depends on colour
+  alone. Alternative parentage claims are drawn as an extra edge from the alternative union, always Disputed-styled
+  (fixes G3: the canvas, mobile tree and PDFs all render kinship links and alternative claims). A legend component
+  is shown in every view.
+- **Rationale**: FR-033, SC-008, and accessibility (colour plus pattern plus icon).
+
+## R23. PDF generation
+
+- **Decision**: **QuestPDF** (C#, Community licence, which is free under USD 1M annual revenue; fits a family
+  project) on the server. Charts are laid out by a C# `ChartLayout` (Reingold–Tilford tidy tree extended with union
+  nodes: a husband, his unions ordered by sequence, and children under each union) and drawn on QuestPDF's canvas.
+  Arabic is shaped by QuestPDF's HarfBuzz text engine with an embedded Arabic font (Noto Naskh Arabic) and
+  `ContentFromRightToLeft()`. Chart types: ancestor (pedigree), descendant, branch wall chart (custom page size up to
+  A0, or tiled A3), and person report (family group sheet with citations).
+- **Jobs**: generation runs as an `export_job` (R24) and the client polls; a 500-person branch is expected to take
+  well under 30 s (SC-009, with a performance test).
+- **Rationale**: Principle V (outputs generated by the API with the same rules and redaction); no headless browser.
+- **Alternatives**: Puppeteer/Playwright HTML→PDF → heavy runtime and a second layout engine; client-side PDF → would
+  bypass server redaction; rejected.
+
+## R24. Background jobs
+
+- **Decision**: An `export_job` table (kind: Pdf/Excel/Csv/Gedcom, params jsonb, status, file id, error, expires_at)
+  processed by a hosted `BackgroundService` that reads a `Channel<Guid>`. On startup, jobs still pending are
+  re-queued. Result files are kept in `IFileStore` for 24 h.
+- **Rationale**: The simplest durable queue with no extra infrastructure (Principle VII).
+- **Alternatives**: Hangfire or Quartz → extra dependency, not needed at this scale.
+
+## R25. Excel/CSV import and export
+
+- **Decision**: **ClosedXML** (MIT) for .xlsx; **CsvHelper** for CSV (zip of one CSV per sheet). The template has the
+  sheets `People`, `Marriages`, `Parentage`, `Kinship`, `Sources`, `Citations`, with a `ref` column used for
+  cross-references inside the file and a `person_id` (`BYR-…`) column for existing records.
+  - **Import**: upload → parse into `import_batch` (rows staged as jsonb with a per-row outcome:
+    New/Update/Unchanged/Rejected, plus rule results) → preview UI → commit. The commit replays the rows through the
+    same Application commands as manual edits inside **one transaction** with **one correlation id** (one history
+    operation, FR-042). Rejected rows are skipped; warnings are acknowledged with source `import`.
+  - Rows without an id are matched by normalised name + father's id when that is unique; otherwise the preview
+    offers "new or merge".
+  - **Export**: same sheets, filtered by branch when one is given; the export → import round trip is tested (SC-010).
+- **Rationale**: FR-041–FR-043 and Principle IX (preview first, same rules).
+- **Alternatives**: EPPlus → commercial licence; NPOI → heavier API.
+
+## R26. Password reset (analysis fix G2)
+
+- **Decision**: ASP.NET Core Identity `GeneratePasswordResetTokenAsync`; endpoints `/auth/forgot-password` (always
+  returns 202, to prevent account enumeration) and `/auth/reset-password`; the link opens the web app; tokens are
+  single-use and expire in 1 hour; rate-limited.
+
+## R27. Unknown-parent placeholder reuse (analysis fix U1)
+
+- **Decision**: When a child's mother (or father) is unknown, the system reuses the known parent's existing
+  placeholder marriage (spouse NULL), creating one only if none exists. The admin can split a placeholder group
+  (move children to a new placeholder) or replace the placeholder spouse with a real person, which converts the
+  placeholder into a normal marriage subject to all rules.

@@ -1,10 +1,13 @@
 openapi: 3.1.0
 info:
-  title: Madinah Family Tree API
-  version: 1.0.0
+  title: Bayrab Genealogy API
+  version: 1.1.0
+  license: { name: Proprietary }
   description: |
     Single API for the React admin editor (web) and the React Native viewer (mobile).
     Rule results: 422 = violation (never saved), 409 = warnings (re-submit with acknowledgedWarnings).
+    Every relationship carries verificationStatus + confidence. Living people are redacted for anonymous viewers
+    in every response, file download, PDF and export.
 servers:
   - url: /api/v1
 security:
@@ -14,154 +17,469 @@ paths:
   # ---------- Auth ----------
   /auth/register:
     post:
+      summary: Register
+      operationId: register
       security: []
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } } } }
       responses: { '201': { $ref: '#/components/responses/Tokens' }, '400': { $ref: '#/components/responses/Problem' } }
   /auth/login:
     post:
+      summary: Login
+      operationId: login
       security: []
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } } }
       responses: { '200': { $ref: '#/components/responses/Tokens' }, '401': { $ref: '#/components/responses/Problem' } }
   /auth/refresh:
     post:
+      summary: Rotate refresh token
+      operationId: refresh
       security: []
-      description: Refresh token from HttpOnly cookie (web) or body (mobile). Rotates the refresh token.
+      description: Refresh token from HttpOnly cookie (web) or body (mobile).
       requestBody: { content: { application/json: { schema: { type: object, properties: { refreshToken: { type: string } } } } } }
       responses: { '200': { $ref: '#/components/responses/Tokens' }, '401': { $ref: '#/components/responses/Problem' } }
   /auth/logout:
-    post: { responses: { '204': { description: Revoked } } }
+    post: { summary: Revoke refresh token, operationId: logout, responses: { '204': { description: Revoked } } }
+  /auth/forgot-password:
+    post:
+      summary: Email a password reset link
+      operationId: forgotPassword
+      security: []
+      description: Always 202 to avoid revealing whether the account exists. Rate-limited.
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } } }
+      responses: { '202': { description: Accepted } }
+  /auth/reset-password:
+    post:
+      summary: Reset password with emailed token
+      operationId: resetPassword
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email, token, newPassword], properties: { email: { type: string }, token: { type: string }, newPassword: { type: string, minLength: 8 } } } } } }
+      responses: { '204': { description: Password changed }, '400': { $ref: '#/components/responses/Problem' } }
   /me:
     get:
-      responses: { '200': { description: Current user and tree memberships, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } } }
+      summary: Current user and memberships
+      operationId: getMe
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } } }
 
   # ---------- Trees & membership ----------
   /trees:
-    get: { responses: { '200': { description: Trees the user belongs to, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Tree' } } } } } } }
+    get:
+      summary: Trees the user belongs to
+      operationId: listTrees
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Tree' } } } } } }
     post:
+      summary: Create tree (caller becomes Owner)
+      operationId: createTree
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TreeUpsert' } } } }
-      responses: { '201': { description: Created; caller becomes Owner, content: { application/json: { schema: { $ref: '#/components/schemas/Tree' } } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Tree' } } } }, '400': { $ref: '#/components/responses/Problem' } }
   /trees/{treeId}:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
-    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Tree' } } } }, '404': { $ref: '#/components/responses/Problem' } } }
-    put: { description: Owner only, requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/TreeUpsert' } } } }, responses: { '200': { description: Updated } } }
-    delete: { description: Owner only, responses: { '204': { description: Deleted } } }
+    get:
+      summary: Get tree
+      operationId: getTree
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Tree' } } } }, '404': { $ref: '#/components/responses/Problem' } }
+    put:
+      summary: Update tree settings (Owner)
+      operationId: updateTree
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/TreeUpsert' } } } }
+      responses: { '200': { description: Updated }, '403': { $ref: '#/components/responses/Problem' } }
+    delete:
+      summary: Delete tree (Owner)
+      operationId: deleteTree
+      responses: { '204': { description: Deleted }, '403': { $ref: '#/components/responses/Problem' } }
   /trees/{treeId}/members:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
-    get: { responses: { '200': { description: Members, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Member' } } } } } } }
+    get:
+      summary: List members
+      operationId: listMembers
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Member' } } } } } }
   /trees/{treeId}/members/{userId}:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { name: userId, in: path, required: true, schema: { type: string, format: uuid } } ]
-    patch: { description: Owner changes role or linked person, requestBody: { content: { application/json: { schema: { type: object, properties: { role: { $ref: '#/components/schemas/Role' }, linkedPersonId: { type: [string, 'null'], format: uuid } } } } } }, responses: { '200': { description: Updated } } }
-    delete: { description: Remove access, responses: { '204': { description: Removed } } }
+    patch:
+      summary: Change role or linked person (Owner)
+      operationId: updateMember
+      requestBody: { content: { application/json: { schema: { type: object, properties: { role: { $ref: '#/components/schemas/Role' }, linkedPersonId: { type: [string, 'null'], format: uuid } } } } } }
+      responses: { '200': { description: Updated }, '422': { $ref: '#/components/responses/Violation' } }
+    delete:
+      summary: Remove access (Owner)
+      operationId: removeMember
+      responses: { '204': { description: Removed }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/invitations:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
     post:
+      summary: Invite by email
+      operationId: createInvitation
       requestBody: { content: { application/json: { schema: { type: object, required: [email, role], properties: { email: { type: string, format: email }, role: { $ref: '#/components/schemas/Role' } } } } } }
       responses: { '201': { description: Invitation emailed } }
   /invitations/{token}/accept:
-    post: { parameters: [ { name: token, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: Membership created } } }
+    post:
+      summary: Accept invitation
+      operationId: acceptInvitation
+      parameters: [ { name: token, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: Membership created }, '410': { $ref: '#/components/responses/Problem' } }
 
-  # ---------- Read: graph & views ----------
+  # ---------- Read: graph, lineages, search ----------
   /trees/{treeId}/graph:
-    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/branchId' } ]
     get:
+      summary: Compact whole-tree (or branch) payload
+      operationId: getTreeGraph
       security: [ {}, { bearer: [] } ]
-      description: Compact whole-tree payload (persons + marriages + kinship links). Living people redacted for anonymous viewers of Public trees.
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } }
   /trees/{treeId}/persons/{personId}/ancestors:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' }, { name: depth, in: query, schema: { type: integer, default: 10, maximum: 40 } } ]
     get:
+      summary: Ancestor view (mobile landing)
+      operationId: getAncestors
       security: [ {}, { bearer: [] } ]
-      description: Ancestor view (mobile landing). Paternal nasab chain plus maternal lines, with each ancestor's marriages.
+      description: Paternal nasab chain plus mothers, each ancestor's marriages, and alternative claims on the chain.
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } }
+  /trees/{treeId}/persons/{personId}/maternal-line:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' }, { name: depth, in: query, schema: { type: integer, default: 10, maximum: 40 } } ]
+    get:
+      summary: Maternal line (mother, maternal grandmother, ...)
+      operationId: getMaternalLine
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: Ordered mothers with their nasab, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/LineageStep' } } } } } }
   /trees/{treeId}/persons/{personId}/descendants:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' }, { name: depth, in: query, schema: { type: integer, default: 3, maximum: 10 } } ]
-    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } } }
+    get:
+      summary: Descendants
+      operationId: getDescendants
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TreeGraph' } } } } }
   /trees/{treeId}/search:
-    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: q, in: query, required: true, schema: { type: string, minLength: 1 } }, { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } } ]
-    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: 'Matches (Arabic/English, diacritic-insensitive)', content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } } } } } } }
+    parameters:
+      - { $ref: '#/components/parameters/treeId' }
+      - { name: q, in: query, required: true, schema: { type: string, minLength: 1 }, description: 'Name in Arabic or English (diacritic-insensitive) or a person id such as BYR-000123' }
+      - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+      - { $ref: '#/components/parameters/branchId' }
+    get:
+      summary: Search people
+      operationId: searchPersons
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: Matches, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } } } } } }
+  /trees/{treeId}/relationships:
+    parameters:
+      - { $ref: '#/components/parameters/treeId' }
+      - { name: status, in: query, schema: { type: array, items: { $ref: '#/components/schemas/VerificationStatus' } }, style: form, explode: false }
+      - { name: confidence, in: query, schema: { type: array, items: { $ref: '#/components/schemas/Confidence' } }, style: form, explode: false }
+      - { name: noSource, in: query, schema: { type: boolean } }
+      - { name: kind, in: query, schema: { type: string, enum: [Marriage, Parentage, Kinship] } }
+      - { $ref: '#/components/parameters/branchId' }
+      - { name: cursor, in: query, schema: { type: string } }
+    get:
+      summary: Research list of relationships filtered by status/confidence/missing sources (Admin)
+      operationId: listRelationships
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RelationshipPage' } } } } }
 
   # ---------- Persons ----------
   /trees/{treeId}/persons:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
     post:
-      description: Admin. Optionally sets parentMarriageId (add as child).
+      summary: Create person (Admin); assigns publicId
+      operationId: createPerson
+      description: If parentMarriageId is given, a preferred parentage claim is created in the same transaction.
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PersonUpsert' } } } }
       responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Person' } } } }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/persons/{personId}:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
-    get: { security: [ {}, { bearer: [] } ], responses: { '200': { description: 'Full detail incl. nasab, spouses, children grouped by marriage', content: { application/json: { schema: { $ref: '#/components/schemas/PersonDetail' } } } } } }
+    get:
+      summary: Person profile
+      operationId: getPerson
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: 'Full profile: nasab, maternal line, claims, marriages with children, branches, citations', content: { application/json: { schema: { $ref: '#/components/schemas/PersonDetail' } } } }, '404': { $ref: '#/components/responses/Problem' } }
     put:
+      summary: Update person
+      operationId: updatePerson
       parameters: [ { $ref: '#/components/parameters/ifMatch' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PersonUpsert' } } } }
       responses: { '200': { description: Updated }, '409': { $ref: '#/components/responses/Warnings' }, '412': { description: Version conflict }, '422': { $ref: '#/components/responses/Violation' } }
     delete:
+      summary: Soft-delete person
+      operationId: deletePerson
       parameters: [ { name: cascade, in: query, schema: { type: string, enum: [none, detach], default: none } } ]
       responses: { '204': { description: Soft-deleted }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/persons/{personId}/restore:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
-    post: { description: Undo of delete, responses: { '200': { description: Restored } } }
-  /trees/{treeId}/persons/{personId}/parent-marriage:
+    post: { summary: Restore deleted person (undo), operationId: restorePerson, responses: { '200': { description: Restored } } }
+  /trees/{treeId}/persons/{personId}/photo:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
     put:
-      description: Drag person onto a union node. Set or clear (null) the biological parent marriage.
-      requestBody: { content: { application/json: { schema: { type: object, properties: { marriageId: { type: [string, 'null'], format: uuid }, acknowledgedWarnings: { $ref: '#/components/schemas/AckList' } } } } } }
-      responses: { '200': { description: Linked }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+      summary: Upload or replace photo
+      operationId: setPersonPhoto
+      requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } } }
+      responses: { '200': { description: Stored }, '413': { $ref: '#/components/responses/Problem' }, '415': { $ref: '#/components/responses/Problem' } }
+    delete: { summary: Remove photo, operationId: deletePersonPhoto, responses: { '204': { description: Removed } } }
   /trees/{treeId}/persons/{personId}/merge:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
-    post: { description: Merge duplicate into this person, requestBody: { content: { application/json: { schema: { type: object, required: [duplicateId], properties: { duplicateId: { type: string, format: uuid } } } } } }, responses: { '200': { description: Merged }, '422': { $ref: '#/components/responses/Violation' } } }
+    post:
+      summary: Merge a duplicate into this person
+      operationId: mergePersons
+      requestBody: { content: { application/json: { schema: { type: object, required: [duplicateId], properties: { duplicateId: { type: string, format: uuid }, acknowledgedWarnings: { $ref: '#/components/schemas/AckList' } } } } } }
+      responses: { '200': { description: Merged }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+
+  # ---------- Parentage claims ----------
+  /trees/{treeId}/persons/{personId}/parentage-claims:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/personId' } ]
+    get:
+      summary: All parentage claims of a person
+      operationId: listParentageClaims
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ParentageClaim' } } } } } }
+    post:
+      summary: Add a parentage claim (drag person onto a union)
+      operationId: createParentageClaim
+      description: |
+        First claim becomes preferred. With asPreferred=true on a person who already has a preferred claim → 422
+        CHILD_HAS_PARENTS; with asPreferred=false it is stored as an alternative and all claims become Disputed
+        unless keepStatuses=true.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ParentageClaimCreate' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/ParentageClaim' } } } }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/parentage-claims/{claimId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/claimId' } ]
+    put:
+      summary: Update status, confidence, notes, birth order
+      operationId: updateParentageClaim
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/VerificationUpdate' } } } }
+      responses: { '200': { description: Updated }, '422': { $ref: '#/components/responses/Violation' } }
+    delete:
+      summary: Delete claim (deleting the preferred one leaves no preferred claim until the admin chooses)
+      operationId: deleteParentageClaim
+      responses: { '204': { description: Deleted } }
+  /trees/{treeId}/parentage-claims/{claimId}/prefer:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/claimId' } ]
+    post:
+      summary: Make this claim the preferred one
+      operationId: preferParentageClaim
+      requestBody: { content: { application/json: { schema: { type: object, properties: { acknowledgedWarnings: { $ref: '#/components/schemas/AckList' } } } } } }
+      responses: { '200': { description: Swapped }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/parentage-claims/{claimId}/restore:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/claimId' } ]
+    post: { summary: Restore deleted claim (undo), operationId: restoreParentageClaim, responses: { '200': { description: Restored }, '422': { $ref: '#/components/responses/Violation' } } }
 
   # ---------- Marriages ----------
   /trees/{treeId}/marriages:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
     post:
-      description: Drag person onto person. Enforces 4-wives / one-husband; mahram & iddah → warnings.
+      summary: Create marriage (drag person onto person)
+      operationId: createMarriage
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }
       responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Marriage' } } } }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/marriages/{marriageId}:
-    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: marriageId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/marriageId' } ]
     put:
+      summary: Update marriage
+      operationId: updateMarriage
       parameters: [ { $ref: '#/components/parameters/ifMatch' } ]
       requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }
-      responses: { '200': { description: Updated }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
-    delete: { description: Refused while it has children unless cascade=detach, responses: { '204': { description: Soft-deleted } } }
+      responses: { '200': { description: Updated }, '409': { $ref: '#/components/responses/Warnings' }, '412': { description: Version conflict }, '422': { $ref: '#/components/responses/Violation' } }
+    delete:
+      summary: Soft-delete marriage (refused while it has claims unless cascade=detach)
+      operationId: deleteMarriage
+      parameters: [ { name: cascade, in: query, schema: { type: string, enum: [none, detach], default: none } } ]
+      responses: { '204': { description: Deleted }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/marriages/{marriageId}/restore:
-    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: marriageId, in: path, required: true, schema: { type: string, format: uuid } } ]
-    post: { responses: { '200': { description: Restored } } }
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/marriageId' } ]
+    post: { summary: Restore marriage (undo), operationId: restoreMarriage, responses: { '200': { description: Restored }, '422': { $ref: '#/components/responses/Violation' } } }
 
   # ---------- Kinship links (kafala, milk) ----------
   /trees/{treeId}/kinship-links:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
-    post: { requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/KinshipLink' } } } }, responses: { '201': { description: Created } } }
+    post:
+      summary: Create kinship link
+      operationId: createKinshipLink
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/KinshipLink' } } } }
+      responses: { '201': { description: Created }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/kinship-links/{linkId}:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { name: linkId, in: path, required: true, schema: { type: string, format: uuid } } ]
-    delete: { responses: { '204': { description: Deleted } } }
+    put:
+      summary: Update kinship link
+      operationId: updateKinshipLink
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/KinshipLink' } } } }
+      responses: { '200': { description: Updated }, '422': { $ref: '#/components/responses/Violation' } }
+    delete: { summary: Delete kinship link, operationId: deleteKinshipLink, responses: { '204': { description: Deleted } } }
+
+  # ---------- Sources, citations, files ----------
+  /trees/{treeId}/sources:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: q, in: query, schema: { type: string } }, { name: type, in: query, schema: { $ref: '#/components/schemas/SourceType' } } ]
+    get:
+      summary: List sources
+      operationId: listSources
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Source' } } } } } }
+    post:
+      summary: Create source
+      operationId: createSource
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SourceUpsert' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Source' } } } }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/sources/{sourceId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/sourceId' } ]
+    get:
+      summary: Source with citations and attachments
+      operationId: getSource
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SourceDetail' } } } } }
+    put:
+      summary: Update source
+      operationId: updateSource
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/SourceUpsert' } } } }
+      responses: { '200': { description: Updated }, '422': { $ref: '#/components/responses/Violation' } }
+    delete:
+      summary: Delete source
+      operationId: deleteSource
+      description: 409 SOURCE_IN_USE lists Verified relationships that would lose their only source; re-send with acknowledgement to delete and downgrade them to Unconfirmed.
+      parameters: [ { name: acknowledgedWarnings, in: query, schema: { type: array, items: { type: string } }, style: form, explode: false } ]
+      responses: { '204': { description: Deleted }, '409': { $ref: '#/components/responses/Warnings' } }
+  /trees/{treeId}/sources/{sourceId}/files:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/sourceId' } ]
+    post:
+      summary: Attach file (scan, PDF, audio) up to 25 MB
+      operationId: attachSourceFile
+      requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } } }
+      responses: { '201': { description: Attached, content: { application/json: { schema: { $ref: '#/components/schemas/StoredFile' } } } }, '413': { $ref: '#/components/responses/Problem' }, '415': { $ref: '#/components/responses/Problem' } }
+  /trees/{treeId}/sources/{sourceId}/files/{fileId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/sourceId' }, { $ref: '#/components/parameters/fileId' } ]
+    delete: { summary: Detach file, operationId: detachSourceFile, responses: { '204': { description: Detached } } }
+  /trees/{treeId}/files/{fileId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/fileId' } ]
+    get:
+      summary: Download a stored file (authorized, redaction-aware)
+      operationId: downloadFile
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: File bytes, content: { application/octet-stream: { schema: { type: string, format: binary } } } }, '404': { $ref: '#/components/responses/Problem' } }
+  /trees/{treeId}/citations:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      summary: Cite a source on a relationship or person fact
+      operationId: createCitation
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CitationUpsert' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Citation' } } } }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/citations/{citationId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: citationId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      summary: Update citation detail or quotation
+      operationId: updateCitation
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/CitationUpsert' } } } }
+      responses: { '200': { description: Updated } }
+    delete:
+      summary: Remove citation
+      operationId: deleteCitation
+      description: 422 VERIFIED_REQUIRES_SOURCE if it is the last citation of a Verified relationship (change the status first).
+      responses: { '204': { description: Deleted }, '422': { $ref: '#/components/responses/Violation' } }
+
+  # ---------- Branches ----------
+  /trees/{treeId}/branches:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    get:
+      summary: List branches with member counts
+      operationId: listBranches
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Branch' } } } } } }
+    post:
+      summary: Create branch
+      operationId: createBranch
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BranchUpsert' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Branch' } } } }, '422': { $ref: '#/components/responses/Violation' } }
+  /trees/{treeId}/branches/{branchId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: branchId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      summary: Update branch
+      operationId: updateBranch
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/BranchUpsert' } } } }
+      responses: { '200': { description: Updated } }
+    delete: { summary: Delete branch, operationId: deleteBranch, responses: { '204': { description: Deleted } } }
 
   # ---------- Editor helpers ----------
   /trees/{treeId}/validate/marriage:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
-    post: { description: Dry-run during drag (nothing saved), requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }, responses: { '200': { description: Rule results, content: { application/json: { schema: { $ref: '#/components/schemas/RuleResults' } } } } } }
-  /trees/{treeId}/validate/parent-marriage:
+    post:
+      summary: Dry-run marriage rules during drag (nothing saved)
+      operationId: validateMarriage
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/MarriageUpsert' } } } }
+      responses: { '200': { description: Rule results, content: { application/json: { schema: { $ref: '#/components/schemas/RuleResults' } } } } }
+  /trees/{treeId}/validate/parentage:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
-    post: { requestBody: { content: { application/json: { schema: { type: object, required: [personId, marriageId], properties: { personId: { type: string, format: uuid }, marriageId: { type: string, format: uuid } } } } } }, responses: { '200': { description: Rule results, content: { application/json: { schema: { $ref: '#/components/schemas/RuleResults' } } } } } }
+    post:
+      summary: Dry-run parentage rules during drag (nothing saved)
+      operationId: validateParentage
+      requestBody: { content: { application/json: { schema: { type: object, required: [personId, marriageId], properties: { personId: { type: string, format: uuid }, marriageId: { type: string, format: uuid }, asPreferred: { type: boolean, default: true } } } } } }
+      responses: { '200': { description: Rule results, content: { application/json: { schema: { $ref: '#/components/schemas/RuleResults' } } } } }
   /trees/{treeId}/lineage/parse:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
     post:
+      summary: Parse a typed lineage chain
+      operationId: parseLineage
       description: 'Quick entry, e.g. "فاطمة بنت محمد بن عبدالله" or "Fatimah bint Muhammad ibn Abdullah". Returns each segment with existing-person candidates.'
       requestBody: { content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string } } } } } }
       responses: { '200': { description: Parsed chain, content: { application/json: { schema: { $ref: '#/components/schemas/LineageParse' } } } } }
   /trees/{treeId}/lineage/commit:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
     post:
-      description: Create/link the chain with the admin's choice per segment (existing id or new). Creates father→child links via placeholder-wife marriages when mother unknown.
+      summary: Create or link the parsed chain
+      operationId: commitLineage
+      description: Links are created as Unconfirmed / Low unless sourceId is supplied (constitution VIII). Unknown mothers reuse the father's placeholder marriage.
       requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/LineageCommit' } } } }
       responses: { '201': { description: Created ids }, '409': { $ref: '#/components/responses/Warnings' }, '422': { $ref: '#/components/responses/Violation' } }
   /trees/{treeId}/history:
     parameters: [ { $ref: '#/components/parameters/treeId' }, { name: before, in: query, schema: { type: string, format: date-time } }, { name: entityId, in: query, schema: { type: string, format: uuid } } ]
-    get: { responses: { '200': { description: Change records, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChangeRecord' } } } } } } }
-  /trees/{treeId}/gedcom:
+    get:
+      summary: Change history (Admin)
+      operationId: getHistory
+      responses: { '200': { description: Change records, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChangeRecord' } } } } } }
+
+  # ---------- Exports (PDF, Excel, CSV, GEDCOM) ----------
+  /trees/{treeId}/exports:
     parameters: [ { $ref: '#/components/parameters/treeId' } ]
-    get: { responses: { '200': { description: GEDCOM 5.5.1 export, content: { text/plain: { schema: { type: string } } } } } }
-    post: { description: Import into this tree, requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } } }, responses: { '200': { description: 'Import report (created, violations, auto-acknowledged warnings)' } } }
+    post:
+      summary: Queue an export job
+      operationId: createExport
+      security: [ {}, { bearer: [] } ]
+      description: Anonymous callers on Public trees may request Pdf only (redacted). Excel/Csv/Gedcom require Admin.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ExportRequest' } } } }
+      responses: { '202': { description: Queued, content: { application/json: { schema: { $ref: '#/components/schemas/ExportJob' } } } }, '403': { $ref: '#/components/responses/Problem' } }
+  /trees/{treeId}/exports/{jobId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/jobId' } ]
+    get:
+      summary: Export job status
+      operationId: getExport
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ExportJob' } } } } }
+  /trees/{treeId}/exports/{jobId}/file:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { $ref: '#/components/parameters/jobId' } ]
+    get:
+      summary: Download export result
+      operationId: downloadExport
+      security: [ {}, { bearer: [] } ]
+      responses: { '200': { description: File, content: { application/octet-stream: { schema: { type: string, format: binary } } } }, '404': { $ref: '#/components/responses/Problem' } }
+
+  # ---------- Imports (Excel, CSV, GEDCOM) ----------
+  /trees/{treeId}/imports/template:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    get:
+      summary: Download Excel import template
+      operationId: getImportTemplate
+      responses: { '200': { description: xlsx, content: { application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: { schema: { type: string, format: binary } } } } }
+  /trees/{treeId}/imports:
+    parameters: [ { $ref: '#/components/parameters/treeId' } ]
+    post:
+      summary: Upload file and build a preview (nothing saved to the tree)
+      operationId: createImport
+      requestBody: { content: { multipart/form-data: { schema: { type: object, required: [file, format], properties: { file: { type: string, format: binary }, format: { type: string, enum: [Xlsx, Csv, Gedcom] } } } } } }
+      responses: { '201': { description: Preview ready, content: { application/json: { schema: { $ref: '#/components/schemas/ImportBatch' } } } }, '400': { $ref: '#/components/responses/Problem' } }
+  /trees/{treeId}/imports/{batchId}:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: batchId, in: path, required: true, schema: { type: string, format: uuid } }, { name: outcome, in: query, schema: { type: string, enum: [New, Update, Unchanged, Rejected] } }, { name: cursor, in: query, schema: { type: string } } ]
+    get:
+      summary: Preview rows (paged, filter by outcome)
+      operationId: getImport
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ImportBatch' } } } } }
+    delete: { summary: Discard preview, operationId: discardImport, responses: { '204': { description: Discarded } } }
+  /trees/{treeId}/imports/{batchId}/commit:
+    parameters: [ { $ref: '#/components/parameters/treeId' }, { name: batchId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      summary: Commit preview in one transaction (one history operation)
+      operationId: commitImport
+      responses: { '200': { description: Committed summary, content: { application/json: { schema: { $ref: '#/components/schemas/ImportBatch' } } } }, '409': { description: Tree changed since preview; re-preview required } }
 
 components:
   securitySchemes:
@@ -169,6 +487,12 @@ components:
   parameters:
     treeId: { name: treeId, in: path, required: true, schema: { type: string, format: uuid } }
     personId: { name: personId, in: path, required: true, schema: { type: string, format: uuid } }
+    marriageId: { name: marriageId, in: path, required: true, schema: { type: string, format: uuid } }
+    claimId: { name: claimId, in: path, required: true, schema: { type: string, format: uuid } }
+    sourceId: { name: sourceId, in: path, required: true, schema: { type: string, format: uuid } }
+    fileId: { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+    jobId: { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+    branchId: { name: branchId, in: query, required: false, schema: { type: string, format: uuid }, description: Restrict to a branch }
     ifMatch: { name: If-Match, in: header, required: false, schema: { type: string }, description: Row version for optimistic concurrency }
   responses:
     Tokens: { description: Tokens, content: { application/json: { schema: { $ref: '#/components/schemas/Tokens' } } } }
@@ -179,6 +503,23 @@ components:
     Role: { type: string, enum: [Owner, Admin, Member] }
     Gender: { type: string, enum: [Male, Female] }
     Calendar: { type: string, enum: [Gregorian, Hijri] }
+    VerificationStatus: { type: string, enum: [Verified, OralAccount, Disputed, Unconfirmed] }
+    Confidence: { type: string, enum: [High, Medium, Low] }
+    SourceType: { type: string, enum: [Document, Book, OfficialRecord, Gravestone, Photo, Website, OralAccount, Other] }
+    Verification:
+      type: object
+      properties:
+        verificationStatus: { $ref: '#/components/schemas/VerificationStatus' }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        citationCount: { type: integer, readOnly: true }
+    VerificationUpdate:
+      allOf:
+        - $ref: '#/components/schemas/Verification'
+        - type: object
+          properties:
+            notes: { type: [string, 'null'] }
+            birthOrder: { type: [integer, 'null'] }
+            acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
     PartialDate:
       type: object
       properties:
@@ -210,7 +551,7 @@ components:
           properties: { results: { type: array, items: { $ref: '#/components/schemas/RuleResult' } } }
     RegisterRequest: { type: object, required: [email, password, displayName], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 }, displayName: { type: string } } }
     LoginRequest: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } }
-    Tokens: { type: object, properties: { accessToken: { type: string }, expiresIn: { type: integer }, refreshToken: { type: string, description: Mobile only; web receives an HttpOnly cookie } } }
+    Tokens: { type: object, properties: { accessToken: { type: string }, expiresIn: { type: integer }, refreshToken: { type: string, description: 'Mobile only; web receives an HttpOnly cookie' } } }
     Me:
       type: object
       properties:
@@ -224,6 +565,7 @@ components:
         id: { type: string, format: uuid }
         nameAr: { type: [string, 'null'] }
         nameEn: { type: [string, 'null'] }
+        idPrefix: { type: string, example: BYR }
         visibility: { type: string, enum: [Private, Public] }
         rootPersonId: { type: [string, 'null'], format: uuid }
         myRole: { oneOf: [ { $ref: '#/components/schemas/Role' }, { type: 'null' } ] }
@@ -232,10 +574,12 @@ components:
       properties:
         nameAr: { type: string }
         nameEn: { type: string }
+        idPrefix: { type: string, pattern: '^[A-Z]{2,6}$', description: Only on create; immutable }
         visibility: { type: string, enum: [Private, Public] }
         rootPersonId: { type: [string, 'null'], format: uuid }
         iddahDivorceDays: { type: integer }
         iddahWidowDays: { type: integer }
+        maxPregnancyDays: { type: integer }
     Member: { type: object, properties: { userId: { type: string, format: uuid }, email: { type: string }, displayName: { type: string }, role: { $ref: '#/components/schemas/Role' }, linkedPersonId: { type: [string, 'null'], format: uuid } } }
     PersonUpsert:
       type: object
@@ -248,6 +592,8 @@ components:
         laqabEn: { type: [string, 'null'] }
         kunyaAr: { type: [string, 'null'] }
         kunyaEn: { type: [string, 'null'] }
+        nisbaAr: { type: [string, 'null'] }
+        nisbaEn: { type: [string, 'null'] }
         familyNameAr: { type: [string, 'null'] }
         familyNameEn: { type: [string, 'null'] }
         birth: { $ref: '#/components/schemas/PartialDate' }
@@ -255,7 +601,7 @@ components:
         death: { $ref: '#/components/schemas/PartialDate' }
         deathPlace: { type: [string, 'null'] }
         isLiving: { type: boolean }
-        parentMarriageId: { type: [string, 'null'], format: uuid }
+        parentMarriageId: { type: [string, 'null'], format: uuid, writeOnly: true, description: Create only; adds a preferred parentage claim }
         notes: { type: [string, 'null'] }
         acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
     Person:
@@ -264,6 +610,8 @@ components:
         - type: object
           properties:
             id: { type: string, format: uuid }
+            publicId: { type: string, example: BYR-000123 }
+            photoFileId: { type: [string, 'null'], format: uuid }
             version: { type: string }
             redacted: { type: boolean }
             flags: { type: array, items: { type: string }, description: Acknowledged warning codes }
@@ -271,6 +619,7 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
+        publicId: { type: string }
         displayNameAr: { type: [string, 'null'] }
         displayNameEn: { type: [string, 'null'] }
         nasabAr: { type: [string, 'null'], example: "محمد بن عبدالله بن عبدالمطلب" }
@@ -280,35 +629,72 @@ components:
         deathYear: { type: [integer, 'null'] }
         isLiving: { type: boolean }
         redacted: { type: boolean }
+    LineageStep:
+      type: object
+      properties:
+        generation: { type: integer }
+        person: { $ref: '#/components/schemas/PersonSummary' }
+        viaClaim: { $ref: '#/components/schemas/ParentageClaim' }
     PersonDetail:
       allOf:
         - $ref: '#/components/schemas/Person'
         - type: object
           properties:
-            nasab: { type: array, items: { $ref: '#/components/schemas/PersonSummary' }, description: 'Father, grandfather, ...' }
-            parents: { type: object, properties: { marriageId: { type: string, format: uuid }, father: { $ref: '#/components/schemas/PersonSummary' }, mother: { $ref: '#/components/schemas/PersonSummary' } } }
+            nasab: { type: array, items: { $ref: '#/components/schemas/PersonSummary' }, description: 'Father, grandfather, ... via preferred claims' }
+            maternalLine: { type: array, items: { $ref: '#/components/schemas/LineageStep' } }
+            parentageClaims: { type: array, items: { $ref: '#/components/schemas/ParentageClaim' } }
             marriages:
               type: array
-              description: Ordered by start date; each with its own children
+              description: Ordered by start date; each with its own children (preferred claims) and alternative-claim children
               items:
                 type: object
                 properties:
                   marriage: { $ref: '#/components/schemas/Marriage' }
                   spouse: { $ref: '#/components/schemas/PersonSummary' }
                   children: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } }
+                  alternativeChildren: { type: array, items: { $ref: '#/components/schemas/PersonSummary' } }
             kinshipLinks: { type: array, items: { $ref: '#/components/schemas/KinshipLink' } }
-    MarriageUpsert:
+            branches: { type: array, items: { $ref: '#/components/schemas/Branch' } }
+            factCitations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+    ParentageClaim:
+      allOf:
+        - $ref: '#/components/schemas/Verification'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            childId: { type: string, format: uuid }
+            marriageId: { type: string, format: uuid }
+            father: { oneOf: [ { $ref: '#/components/schemas/PersonSummary' }, { type: 'null' } ] }
+            mother: { oneOf: [ { $ref: '#/components/schemas/PersonSummary' }, { type: 'null' } ] }
+            isPreferred: { type: boolean }
+            birthOrder: { type: [integer, 'null'] }
+            notes: { type: [string, 'null'] }
+            citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+    ParentageClaimCreate:
       type: object
+      required: [marriageId]
       properties:
-        husbandId: { type: [string, 'null'], format: uuid }
-        wifeId: { type: [string, 'null'], format: uuid }
-        start: { $ref: '#/components/schemas/PartialDate' }
-        end: { $ref: '#/components/schemas/PartialDate' }
-        endReason: { type: string, enum: [Ongoing, Divorce, Khul, Annulment, DeathOfHusband, DeathOfWife, Unknown] }
-        divorceKind: { type: [string, 'null'], enum: [Revocable, IrrevocableMinor, IrrevocableMajor, null] }
-        divorceCount: { type: [integer, 'null'], minimum: 1, maximum: 3 }
-        notes: { type: [string, 'null'] }
+        marriageId: { type: [string, 'null'], format: uuid, description: Null with knownParentId → reuse/create placeholder union }
+        knownParentId: { type: [string, 'null'], format: uuid }
+        asPreferred: { type: boolean, default: true }
+        keepStatuses: { type: boolean, default: false }
+        verificationStatus: { $ref: '#/components/schemas/VerificationStatus' }
+        confidence: { $ref: '#/components/schemas/Confidence' }
         acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
+    MarriageUpsert:
+      allOf:
+        - $ref: '#/components/schemas/Verification'
+        - type: object
+          properties:
+            husbandId: { type: [string, 'null'], format: uuid }
+            wifeId: { type: [string, 'null'], format: uuid }
+            start: { $ref: '#/components/schemas/PartialDate' }
+            end: { $ref: '#/components/schemas/PartialDate' }
+            endReason: { type: string, enum: [Ongoing, Divorce, Khul, Annulment, DeathOfHusband, DeathOfWife, Unknown] }
+            divorceKind: { type: [string, 'null'], enum: [Revocable, IrrevocableMinor, IrrevocableMajor, null] }
+            divorceCount: { type: [integer, 'null'], minimum: 1, maximum: 3 }
+            notes: { type: [string, 'null'] }
+            acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
     Marriage:
       allOf:
         - $ref: '#/components/schemas/MarriageUpsert'
@@ -316,22 +702,115 @@ components:
           properties:
             id: { type: string, format: uuid }
             version: { type: string }
+            isPlaceholder: { type: boolean }
             sequenceForHusband: { type: integer }
             flags: { type: array, items: { type: string } }
+            citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
     KinshipLink:
+      allOf:
+        - $ref: '#/components/schemas/Verification'
+        - type: object
+          required: [kind, personId, relatedPersonId]
+          properties:
+            id: { type: string, format: uuid, readOnly: true }
+            kind: { type: string, enum: [Guardianship, MilkMother, MilkFather] }
+            personId: { type: string, format: uuid }
+            relatedPersonId: { type: string, format: uuid }
+            start: { $ref: '#/components/schemas/PartialDate' }
+            end: { $ref: '#/components/schemas/PartialDate' }
+            notes: { type: [string, 'null'] }
+    SourceUpsert:
       type: object
-      required: [kind, personId, relatedPersonId]
+      required: [type, title]
       properties:
-        id: { type: string, format: uuid, readOnly: true }
-        kind: { type: string, enum: [Guardianship, MilkMother, MilkFather] }
-        personId: { type: string, format: uuid }
-        relatedPersonId: { type: string, format: uuid }
-        start: { $ref: '#/components/schemas/PartialDate' }
-        end: { $ref: '#/components/schemas/PartialDate' }
+        type: { $ref: '#/components/schemas/SourceType' }
+        title: { type: string }
+        author: { type: [string, 'null'] }
+        date: { $ref: '#/components/schemas/PartialDate' }
+        repository: { type: [string, 'null'] }
+        reference: { type: [string, 'null'] }
+        narratorPersonId: { type: [string, 'null'], format: uuid, description: OralAccount }
+        narratorName: { type: [string, 'null'], description: OralAccount }
+        toldOn: { $ref: '#/components/schemas/PartialDate' }
+        recordedBy: { type: [string, 'null'] }
         notes: { type: [string, 'null'] }
+    Source:
+      allOf:
+        - $ref: '#/components/schemas/SourceUpsert'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            citationCount: { type: integer }
+            files: { type: array, items: { $ref: '#/components/schemas/StoredFile' } }
+    SourceDetail:
+      allOf:
+        - $ref: '#/components/schemas/Source'
+        - type: object
+          properties:
+            citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+    StoredFile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fileName: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer }
+    CitationUpsert:
+      type: object
+      required: [sourceId]
+      description: Exactly one target must be set.
+      properties:
+        sourceId: { type: string, format: uuid }
+        marriageId: { type: [string, 'null'], format: uuid }
+        parentageClaimId: { type: [string, 'null'], format: uuid }
+        kinshipLinkId: { type: [string, 'null'], format: uuid }
+        personId: { type: [string, 'null'], format: uuid }
+        fact: { type: [string, 'null'], enum: [General, Name, Birth, Death, null] }
+        detail: { type: [string, 'null'] }
+        quotation: { type: [string, 'null'] }
+    Citation:
+      allOf:
+        - $ref: '#/components/schemas/CitationUpsert'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            sourceTitle: { type: string }
+            sourceType: { $ref: '#/components/schemas/SourceType' }
+    RelationshipPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              kind: { type: string, enum: [Marriage, Parentage, Kinship] }
+              id: { type: string, format: uuid }
+              label: { type: string, example: 'Ali ibn Hasan → child of Hasan & Aminah' }
+              verificationStatus: { $ref: '#/components/schemas/VerificationStatus' }
+              confidence: { $ref: '#/components/schemas/Confidence' }
+              citationCount: { type: integer }
+        nextCursor: { type: [string, 'null'] }
+    BranchUpsert:
+      type: object
+      properties:
+        nameAr: { type: [string, 'null'] }
+        nameEn: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        rootPersonId: { type: [string, 'null'], format: uuid }
+        rootMarriageId: { type: [string, 'null'], format: uuid }
+        includeSpouses: { type: boolean, default: true }
+        color: { type: [string, 'null'] }
+    Branch:
+      allOf:
+        - $ref: '#/components/schemas/BranchUpsert'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            memberCount: { type: integer }
     TreeGraph:
       type: object
-      description: Compact payload for layout. Field names short on purpose.
+      description: Compact payload for layout. Field names short on purpose. vs = verification status, cf = confidence.
       properties:
         persons:
           type: array
@@ -339,15 +818,16 @@ components:
             type: object
             properties:
               id: { type: string }
+              pid: { type: string, description: public id }
               g: { type: string, enum: [M, F] }
               ar: { type: [string, 'null'] }
               en: { type: [string, 'null'] }
               by: { type: [integer, 'null'], description: birth year }
               dy: { type: [integer, 'null'], description: death year }
               l: { type: boolean, description: living }
-              pm: { type: [string, 'null'], description: parent marriage id }
               r: { type: boolean, description: redacted }
               f: { type: boolean, description: has acknowledged warnings }
+              br: { type: array, items: { type: integer }, description: 'indexes into branches[]' }
         marriages:
           type: array
           items:
@@ -360,10 +840,27 @@ components:
               ey: { type: [integer, 'null'], description: end year }
               er: { type: string, description: end reason }
               s: { type: integer, description: sequence for husband }
+              ph: { type: boolean, description: placeholder }
+              vs: { $ref: '#/components/schemas/VerificationStatus' }
+              cf: { $ref: '#/components/schemas/Confidence' }
               f: { type: boolean }
+        claims:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              c: { type: string, description: child id }
+              m: { type: string, description: marriage id }
+              p: { type: boolean, description: preferred }
+              vs: { $ref: '#/components/schemas/VerificationStatus' }
+              cf: { $ref: '#/components/schemas/Confidence' }
         links:
           type: array
-          items: { type: object, properties: { id: { type: string }, k: { type: string }, p: { type: string }, rp: { type: string } } }
+          items: { type: object, properties: { id: { type: string }, k: { type: string }, p: { type: string }, rp: { type: string }, vs: { $ref: '#/components/schemas/VerificationStatus' } } }
+        branches:
+          type: array
+          items: { type: object, properties: { id: { type: string }, ar: { type: [string, 'null'] }, en: { type: [string, 'null'] }, color: { type: [string, 'null'] } } }
     LineageParse:
       type: object
       properties:
@@ -386,7 +883,52 @@ components:
             properties:
               existingPersonId: { type: [string, 'null'], format: uuid }
               newPerson: { oneOf: [ { $ref: '#/components/schemas/PersonUpsert' }, { type: 'null' } ] }
+        sourceId: { type: [string, 'null'], format: uuid, description: Optional source cited on every created link }
+        verificationStatus: { $ref: '#/components/schemas/VerificationStatus' }
         acknowledgedWarnings: { $ref: '#/components/schemas/AckList' }
+    ExportRequest:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [Pdf, Excel, Csv, Gedcom] }
+        chart: { type: [string, 'null'], enum: [Ancestor, Descendant, BranchWall, PersonReport, null], description: Pdf only }
+        rootPersonId: { type: [string, 'null'], format: uuid }
+        branchId: { type: [string, 'null'], format: uuid }
+        generations: { type: [integer, 'null'], minimum: 1, maximum: 30 }
+        language: { type: string, enum: [ar, en], default: en }
+        paper: { type: string, enum: [A4, A3, A2, A1, A0, Custom], default: A4 }
+        customSizeMm: { type: [object, 'null'], properties: { width: { type: integer }, height: { type: integer } } }
+        includeSources: { type: boolean, default: true }
+    ExportJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string }
+        status: { type: string, enum: [Queued, Running, Done, Failed] }
+        error: { type: [string, 'null'] }
+        fileName: { type: [string, 'null'] }
+        expiresAt: { type: [string, 'null'], format: date-time }
+    ImportBatch:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        format: { type: string, enum: [Xlsx, Csv, Gedcom] }
+        status: { type: string, enum: [Parsed, Committed, Discarded, Failed] }
+        summary: { type: object, properties: { new: { type: integer }, update: { type: integer }, unchanged: { type: integer }, rejected: { type: integer }, warnings: { type: integer } } }
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              sheet: { type: string }
+              row: { type: integer }
+              outcome: { type: string, enum: [New, Update, Unchanged, Rejected] }
+              matchedPersonId: { type: [string, 'null'] }
+              candidates: { type: array, items: { $ref: '#/components/schemas/PersonSummary' }, description: For new-or-merge decisions }
+              values: { type: object, additionalProperties: true }
+              results: { type: array, items: { $ref: '#/components/schemas/RuleResult' } }
+        nextCursor: { type: [string, 'null'] }
+        correlationId: { type: [string, 'null'], format: uuid }
     ChangeRecord:
       type: object
       properties:

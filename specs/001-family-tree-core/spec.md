@@ -34,7 +34,7 @@ be recorded with several husbands as long as the marriages do not overlap in tim
 **Why this priority**: Correct marriage modelling is the whole reason for the product. Without it no tree
 can be built.
 
-**Independent Test**: Using only the admin editor, create a man with three concurrent wives, and a woman who
+**Independent Test**: Using the admin web forms, create a man with three concurrent wives, and a woman who
 was married, divorced, and then remarried. Confirm both are saved and displayed, and that a fifth concurrent
 wife or an overlapping second husband is refused with a clear reason.
 
@@ -103,9 +103,9 @@ two grandchildren) using only the canvas, with no forms outside it. Confirm the 
 1. **Given** the canvas, **When** the admin types a name and presses Enter, **Then** a new person card appears.
 2. **Given** a man and a woman on the canvas, **When** the admin drags one onto the other, **Then** a marriage dialog
    opens pre-filled with both, asks for the start date, and creates the marriage on confirm.
-3. **Given** a marriage on the canvas, **When** the admin drags a person onto the marriage link, **Then** the person
+3. **Given** a marriage on the canvas, **When** the admin drags a person onto the marriage connector, **Then** the person
    becomes a child of that marriage.
-4. **Given** a drop that breaks a structural rule (e.g. same-gender marriage, 5th concurrent wife, child older than parent),
+4. **Given** a drop that breaks a structural rule (e.g. same-gender marriage, 5th concurrent wife, child born before their parent),
    **When** the admin releases it, **Then** nothing is changed and the reason is shown next to the drop point.
 5. **Given** any change, **When** the admin presses Undo, **Then** the last change is reversed.
 6. **Given** quick entry "Fatimah bint Muhammad ibn Abdullah", **When** submitted, **Then** the system creates or
@@ -252,9 +252,10 @@ two updates and one creation; after commit the tree reflects them and history at
 
 ### Edge Cases
 
-- A man's marriage to a 4th wife ends by divorce; can a new marriage start the next day? Yes for the man (subject to
-  the iddah rule below for the woman he divorced, which does not restrict him except from marrying her sister/aunt/niece
-  during her iddah).
+- A man with four wives divorces one; can a new marriage start the next day? Most scholars (Hanafi, Hanbali) hold that
+  a wife in iddah still counts toward the four, certainly after a revocable divorce. The system therefore saves it with a
+  `FIFTH_WIFE_DURING_IDDAH` warning while the divorced wife's iddah is running (FR-044); after the iddah it is saved
+  without warning. Marrying the divorced wife's sister, aunt, or niece during her iddah gives `FORBIDDEN_COMBINATION`.
 - Marriage dates unknown (common for older generations): the admin can mark a marriage with unknown dates; rule checks
   then become warnings, not blocks, because overlap cannot be proven.
 - The same couple divorces and remarries: allowed as a second marriage record between the same two people, up to the
@@ -263,7 +264,7 @@ two updates and one creation; after commit the tree reflects them and history at
 - Duplicate people (same name, same father): the editor offers to merge.
 - Deleting a person who has children or marriages: blocked until the admin confirms what happens to those links.
 - Very large trees (thousands of people): the viewer collapses distant branches and expands on demand.
-- Cycles (a person becoming their own ancestor): always refused, for preferred and alternative claims alike.
+- Cycles: refused per FR-013, for preferred and alternative claims alike.
 - A disputed marriage that would be a fifth concurrent wife or a second concurrent husband: hard limits count only
   marriages not marked "Disputed"; recording a disputed marriage that would break a limit produces a warning instead,
   so conflicting accounts can still be documented.
@@ -281,7 +282,7 @@ two updates and one creation; after commit the tree reflects them and history at
 
 - **FR-001**: Admins MUST be able to create, edit and delete a person with: given name (ism), names in Arabic and
   English, gender (male/female), optional laqab, kunya, birth date/place, death date/place, living/deceased status,
-  photo, and notes. Dates MAY be exact, year-only, or unknown, and MAY be given in Hijri or Gregorian.
+  photo (uploaded and stored by the platform, like source attachments), and notes. Dates MAY be exact, year-only, or unknown, and MAY be given in Hijri or Gregorian.
 - **FR-002**: The system MUST compute and display each person's nasab chain from the recorded paternal line.
 
 **Marriages**
@@ -299,17 +300,23 @@ two updates and one creation; after commit the tree reflects them and history at
 - **FR-008**: The system MUST refuse marriages between two people of the same gender.
 - **FR-009**: When marriage dates are unknown or partial, rule checks that depend on them MUST become warnings the admin
   confirms, instead of blocks.
+- **FR-044**: The system MUST warn (`FIFTH_WIFE_DURING_IDDAH`, admin confirms) when a man's new marriage starts while he
+  already has four wives counting any wife still in iddah from a divorce by him.
 
 **Children & lineage**
 
 - **FR-010**: Each person MUST have at most one **preferred** biological parentage (one marriage: father + mother), which
   drives the tree, nasab, and searches. Additional **alternative** parentage claims MAY be recorded (FR-031). A child MAY
-  be recorded with a known father but unknown mother (placeholder wife), or vice versa.
+  be recorded with a known father but unknown mother (placeholder wife), or vice versa. All children of the same known
+  parent whose other parent is unknown share **one** placeholder marriage, so they appear as one group, unless the
+  admin splits them.
 - **FR-011**: The system MUST warn when a child's birth date is before the parents' marriage start date, or later than
   the end of the marriage plus the allowed pregnancy period, and when a child is born before a parent is old enough.
 - **FR-012**: Guardianship (kafala) and milk kinship (rada'a) MUST be recordable as separate relationships that never change
   lineage. Milk kinship MUST count in the mahram checks of FR-007.
 - **FR-013**: The system MUST refuse any change that would make a person their own ancestor.
+- **FR-045**: The system MUST refuse a parentage where the child's birth is certainly before a parent's birth
+  (`CHILD_BORN_BEFORE_PARENT`); when the dates only possibly conflict it is a `PARENT_TOO_YOUNG` warning (FR-011).
 
 **Visual editor**
 
@@ -322,6 +329,8 @@ two updates and one creation; after commit the tree reflects them and history at
 - **FR-018**: Admins MUST be able to quick-enter a lineage chain as text ("A ibn B ibn C" / "A bint B ibn C", in Arabic or
   English) and resolve each name to an existing or new person.
 - **FR-019**: Admins MUST be able to import and export the tree in GEDCOM format, with marriages and their dates kept.
+  GEDCOM import follows the same preview-then-commit flow as FR-042: records that break a structural rule are rejected
+  and listed, the people they mention are still imported, and warnings are acknowledged with source "import".
 
 **Viewing, search, language**
 
@@ -333,7 +342,8 @@ two updates and one creation; after commit the tree reflects them and history at
 
 **Access & audit**
 
-- **FR-024**: The system MUST support the roles Owner, Admin (edit) and Member (view). Users sign in with email and password.
+- **FR-024**: The system MUST support the roles Owner, Admin (edit) and Member (view). Users sign in with email and password and
+  can reset a forgotten password through an emailed single-use link.
 - **FR-025**: The system MUST host many separate family trees. Any signed-up user can create a tree and becomes its Owner;
   roles are per tree, and a person record belongs to exactly one tree. Trees MUST be isolated from each other.
 - **FR-026**: Each tree MUST have a visibility setting chosen by its Owner: Private (default, members only) or Public
