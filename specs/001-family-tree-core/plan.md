@@ -1,5 +1,7 @@
 # Implementation Plan: Islamic Family Tree — Core
 
+> ⚠ **Outdated (2026-10-17)**: the spec was elaborated with the Bayrab Genealogy scope (sources & verification status, competing claims, branches, person IDs, PDF, Excel/CSV) and the constitution moved to v1.2.0. Regenerate with `/speckit-plan` then `/speckit-tasks` before implementing.
+
 **Branch**: `001-family-tree-core` | **Date**: 2026-10-06 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `specs/001-family-tree-core/spec.md`
 

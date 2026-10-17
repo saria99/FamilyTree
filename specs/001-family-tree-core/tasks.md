@@ -4,6 +4,8 @@ description: "Task list for 001-family-tree-core"
 
 # Tasks: Islamic Family Tree — Core
 
+> ⚠ **Outdated (2026-10-17)**: the spec was elaborated with the Bayrab Genealogy scope (sources & verification status, competing claims, branches, person IDs, PDF, Excel/CSV) and the constitution moved to v1.2.0. Regenerate with `/speckit-plan` then `/speckit-tasks` before implementing.
+
 **Input**: Design documents from `specs/001-family-tree-core/`
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/)
 

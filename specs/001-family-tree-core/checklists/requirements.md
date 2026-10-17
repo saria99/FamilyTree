@@ -31,5 +31,6 @@
 
 ## Notes
 
+- 2026-10-17: re-validated after Bayrab elaboration (FR-028–FR-043, US6–US9, SC-007–SC-011); all items pass.
 - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`
 - GEDCOM (FR-019) is a file-format requirement named by the user domain, not an implementation choice.
