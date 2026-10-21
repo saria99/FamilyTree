@@ -1,0 +1,27 @@
+{
+  "description": "Shared by web (Vitest) and backend (xUnit): Arabic search normalisation, nasab formatting, lineage parsing.",
+  "normalize": [
+    ["عَبْدُ اللّٰهِ", "عبد الله"],
+    ["أحمد", "احمد"],
+    ["إبراهيم", "ابراهيم"],
+    ["آمنة", "امنه"],
+    ["مـــحمد", "محمد"],
+    ["مصطفى", "مصطفي"],
+    ["مؤمن", "مومن"],
+    ["هانئ", "هاني"],
+    ["Abd al-Rahman", "abd alrahman"],
+    ["  Fatimah   Zahra ", "fatimah zahra"]
+  ],
+  "nasab": [
+    { "person": ["علي", "Ali", "M"], "fathers": [["حامد", "Hamid"], ["سالم", "Salim"]], "ar": "علي بن حامد بن سالم", "en": "Ali ibn Hamid ibn Salim" },
+    { "person": ["فاطمة", "Fatimah", "F"], "fathers": [["محمد", "Muhammad"], ["عبدالله", "Abdullah"]], "ar": "فاطمة بنت محمد بن عبدالله", "en": "Fatimah bint Muhammad ibn Abdullah" },
+    { "person": ["يوسف", "Yusuf", "M"], "fathers": [], "ar": "يوسف", "en": "Yusuf" }
+  ],
+  "lineage": [
+    { "text": "Fatimah bint Muhammad ibn Abdullah", "segments": [["Fatimah", "F"], ["Muhammad", "M"], ["Abdullah", "M"]] },
+    { "text": "Ahmad ibn Ali ibn Hasan", "segments": [["Ahmad", "M"], ["Ali", "M"], ["Hasan", "M"]] },
+    { "text": "فاطمة بنت محمد بن عبدالله", "segments": [["فاطمة", "F"], ["محمد", "M"], ["عبدالله", "M"]] },
+    { "text": "عليّ  ابن  حامد", "segments": [["علي", "M"], ["حامد", "M"]] },
+    { "text": "Ali bin Abd al-Rahman", "segments": [["Ali", "M"], ["Abd al-Rahman", "M"]] }
+  ]
+}

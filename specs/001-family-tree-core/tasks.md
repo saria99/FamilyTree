@@ -37,52 +37,52 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 
 ### Setup
 
-- [ ] T001 Scaffold `web/` with Vite React TS; add `@xyflow/react elkjs react-router-dom i18next react-i18next react-hook-form zod @hookform/resolvers idb-keyval`; dev deps `vitest @testing-library/react @testing-library/user-event jsdom @playwright/test vite-plugin-pwa`
-- [ ] T002 [P] Configure ESLint + Prettier (`web/eslint.config.js`, `web/.prettierrc`) and Vitest (`web/vitest.config.ts`, jsdom)
-- [ ] T003 [P] Configure `vite-plugin-pwa` in `web/vite.config.ts` (generateSW, `registerType: 'prompt'`, manifest name "Bayrab Genealogy", short name "Bayrab", standalone, theme colours, `base` from `VITE_BASE` for GitHub Pages) and add icons `web/public/icons/{icon-192.png,icon-512.png,maskable-512.png}`
-- [ ] T004 [P] Add GitHub Pages deploy workflow `.github/workflows/pages.yml` (Node 24, `npm ci && npm run build` in `web/` with `VITE_BASE=/<repo>/`, upload `web/dist`, SPA 404 fallback copy of `index.html`)
-- [ ] T005 [P] Add root `.gitignore` (node, dist, dotnet, `.env`, `backend/.data/`), `.editorconfig`, `.gitattributes` (`* text=auto eol=lf`)
+- [x] T001 Scaffold `web/` with Vite React TS; add `@xyflow/react elkjs react-router-dom i18next react-i18next react-hook-form zod @hookform/resolvers idb-keyval`; dev deps `vitest @testing-library/react @testing-library/user-event jsdom @playwright/test vite-plugin-pwa`
+- [x] T002 [P] Configure ESLint + Prettier (`web/eslint.config.js`, `web/.prettierrc`) and Vitest (`web/vitest.config.ts`, jsdom) — *done with oxlint (Vite template default) instead of ESLint*
+- [x] T003 [P] Configure `vite-plugin-pwa` in `web/vite.config.ts` (generateSW, `registerType: 'prompt'`, manifest name "Bayrab Genealogy", short name "Bayrab", standalone, theme colours, `base` from `VITE_BASE` for GitHub Pages) and add icons `web/public/icons/{icon-192.png,icon-512.png,maskable-512.png}`
+- [x] T004 [P] Add GitHub Pages deploy workflow `.github/workflows/pages.yml` (Node 24, `npm ci && npm run build` in `web/` with `VITE_BASE=/<repo>/`, upload `web/dist`, SPA 404 fallback copy of `index.html`)
+- [x] T005 [P] Add root `.gitignore` (node, dist, dotnet, `.env`, `backend/.data/`), `.editorconfig`, `.gitattributes` (`* text=auto eol=lf`)
 
 ### Data & rules in the browser
 
-- [ ] T006 [US1] Define the TS model mirroring data-model.md (`Person` with `publicId`, `Marriage`, `ParentageClaim`, `KinshipLink`, `Source`, `Citation`, `Branch`, `Verification`, `PartialDate`) in `web/src/data/model.ts`
-- [ ] T007 [P] [US1] Create a **fictional** sample family (prefix `DEMO`, 4 generations, a man with 3 wives, a woman with two sequential husbands, one disputed parentage, one oral-account source, one document source, kafala, milk kinship, two branches, Arabic + English names) in `web/src/data/sampleFamily.ts`
-- [ ] T008 [US1] Implement `DataSource` interface (queries + commands matching the API slices) in `web/src/data/DataSource.ts` and `LocalStore` (reducer, command history for undo/redo, localStorage persistence with schema version, "Reset demo") in `web/src/data/LocalStore.ts`
-- [ ] T009 [P] [US1] Create rule test vectors `test-vectors/rules/{concurrent-wives,wife-overlap,parentage,iddah,verified-source}.json` (input graph + proposed change + expected codes) and `test-vectors/{normalize,nasab,status-styles}.json`
-- [ ] T010 [US1] Vitest tests over the vectors for `MAX_CONCURRENT_WIVES`, `WIFE_HAS_HUSBAND`, `SAME_GENDER_MARRIAGE`, `POSSIBLE_OVERLAP`, `IDDAH_OVERLAP`, `FIFTH_WIFE_DURING_IDDAH`, `DISPUTED_EXCEEDS_LIMIT`, `CHILD_HAS_PARENTS`, `DUPLICATE_PARENTAGE_CLAIM`, `ANCESTOR_CYCLE`, `CHILD_BORN_BEFORE_PARENT`, `VERIFIED_REQUIRES_SOURCE` in `web/src/domain/rules.test.ts`
-- [ ] T011 [US1] Implement `partialDate.ts` (Y/M/D precision bounds, approximate; Hijri display via `Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura')`) and `rules.ts` (the codes in T010; mahram checks are deferred to the backend phase) in `web/src/domain/`
-- [ ] T012 [P] [US1] Implement `messages.ts` (ar/en from contracts/rule-codes.md) in `web/src/domain/messages.ts`
-- [ ] T013 [P] [US2] Implement `normalizeArabic.ts` and `formatNasab.ts` with tests on `test-vectors/` in `web/src/domain/text/`
-- [ ] T014 [P] [US3] Implement `LineageParser` port (ibn/bin/bint/ابن/بن/بنت) with tests in `web/src/domain/text/lineageParser.ts`
-- [ ] T015 [US1] Implement JSON file save/load: "Download tree (JSON)" and "Open JSON file" with zod validation and a version check, in `web/src/data/jsonFile.ts` and `web/src/features/settings/DataFileMenu.tsx`
+- [x] T006 [US1] Define the TS model mirroring data-model.md (`Person` with `publicId`, `Marriage`, `ParentageClaim`, `KinshipLink`, `Source`, `Citation`, `Branch`, `Verification`, `PartialDate`) in `web/src/data/model.ts`
+- [x] T007 [P] [US1] Create a **fictional** sample family (prefix `DEMO`, 4 generations, a man with 3 wives, a woman with two sequential husbands, one disputed parentage, one oral-account source, one document source, kafala, milk kinship, two branches, Arabic + English names) in `web/src/data/sampleFamily.ts`
+- [x] T008 [US1] Implement `DataSource` interface (queries + commands matching the API slices) in `web/src/data/DataSource.ts` and `LocalStore` (reducer, command history for undo/redo, localStorage persistence with schema version, "Reset demo") in `web/src/data/LocalStore.ts`
+- [x] T009 [P] [US1] Create rule test vectors `test-vectors/rules/{concurrent-wives,wife-overlap,parentage,iddah,verified-source}.json` (input graph + proposed change + expected codes) and `test-vectors/{normalize,nasab,status-styles}.json` — *done as `test-vectors/rules.json` and `test-vectors/text.json`*
+- [x] T010 [US1] Vitest tests over the vectors for `MAX_CONCURRENT_WIVES`, `WIFE_HAS_HUSBAND`, `SAME_GENDER_MARRIAGE`, `POSSIBLE_OVERLAP`, `IDDAH_OVERLAP`, `FIFTH_WIFE_DURING_IDDAH`, `DISPUTED_EXCEEDS_LIMIT`, `CHILD_HAS_PARENTS`, `DUPLICATE_PARENTAGE_CLAIM`, `ANCESTOR_CYCLE`, `CHILD_BORN_BEFORE_PARENT`, `VERIFIED_REQUIRES_SOURCE` in `web/src/domain/rules.test.ts`
+- [x] T011 [US1] Implement `partialDate.ts` (Y/M/D precision bounds, approximate; Hijri display via `Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura')`) and `rules.ts` (the codes in T010; mahram checks are deferred to the backend phase) in `web/src/domain/`
+- [x] T012 [P] [US1] Implement `messages.ts` (ar/en from contracts/rule-codes.md) in `web/src/domain/messages.ts`
+- [x] T013 [P] [US2] Implement `normalizeArabic.ts` and `formatNasab.ts` with tests on `test-vectors/` in `web/src/domain/text/`
+- [x] T014 [P] [US3] Implement `LineageParser` port (ibn/bin/bint/ابن/بن/بنت) with tests in `web/src/domain/text/lineageParser.ts`
+- [x] T015 [US1] Implement JSON file save/load: "Download tree (JSON)" and "Open JSON file" with zod validation and a version check, in `web/src/data/jsonFile.ts` and `web/src/features/settings/DataFileMenu.tsx`
 
 ### Shell, statuses, layout
 
-- [ ] T016 [US4] Implement the app shell: router, i18n ar/en with `<html dir>` switching, responsive layout (desktop: toolbar + canvas + side panel; phone < 768 px: bottom tabs Lineage/Tree/Search/Settings), permanent "Prototype — fictional sample data" banner, in `web/src/app/` and `web/src/locales/{ar,en}.json`
-- [ ] T017 [P] [US6] Implement `status/styles.ts` (dash, colour, width by confidence, badge icon; checked against `test-vectors/status-styles.json`), `StatusBadge`, `StatusLegend` in `web/src/shared/`
-- [ ] T018 [US3] Implement layout (elkjs in a Web Worker: person + union nodes, wives ordered by sequence beside the husband, children under their union, alternative-claim and kinship edges, RTL mirroring) with tests in `web/src/features/layout/`
-- [ ] T019 [P] [US3] Implement `PersonNode` (name per locale, public id, years, gender colour, flag), `UnionNode` (years, end-reason glyph, status badge, drop target), `StatusEdge` in `web/src/features/editor/{nodes,edges}/`
+- [x] T016 [US4] Implement the app shell: router, i18n ar/en with `<html dir>` switching, responsive layout (desktop: toolbar + canvas + side panel; phone < 768 px: bottom tabs Lineage/Tree/Search/Settings), permanent "Prototype — fictional sample data" banner, in `web/src/app/` and `web/src/locales/{ar,en}.json`
+- [x] T017 [P] [US6] Implement `status/styles.ts` (dash, colour, width by confidence, badge icon; checked against `test-vectors/status-styles.json`), `StatusBadge`, `StatusLegend` in `web/src/shared/`
+- [x] T018 [US3] Implement layout (elkjs in a Web Worker: person + union nodes, wives ordered by sequence beside the husband, children under their union, alternative-claim and kinship edges, RTL mirroring) with tests in `web/src/features/layout/` — *elkjs is lazy-loaded on the main thread; move to a Worker if large trees feel slow*
+- [x] T019 [P] [US3] Implement `PersonNode` (name per locale, public id, years, gender colour, flag), `UnionNode` (years, end-reason glyph, status badge, drop target), `StatusEdge` in `web/src/features/editor/{nodes,edges}/`
 
 ### Editor (desktop)
 
-- [ ] T020 [US3] Implement `Canvas` (React Flow, pan/zoom, minimap, legend overlay, branch filter, drag-over rule check colouring green/amber/red, drop flows: person→person = MarriageDialog, person→union = child, child with preferred parents → "Add as alternative claim?") in `web/src/features/editor/Canvas.tsx`
-- [ ] T021 [US3] Implement `CommandBar` (type name + Enter → gender → new person; lineage text → parse → pick existing/new → create chain as Unconfirmed) in `web/src/features/editor/CommandBar.tsx`
-- [ ] T022 [US1] Implement `SidePanel` with `PersonForm`, `MarriageForm` (dates, end reason, divorce kind/count, status + confidence; Verified disabled until a source is cited), claim panel (status, sources, Make preferred), and `WarningDialog` (confirm warnings) in `web/src/features/editor/`
-- [ ] T023 [US3] Implement undo/redo toolbar and Ctrl+Z / Ctrl+Y over `LocalStore` history in `web/src/features/editor/UndoRedo.tsx`
-- [ ] T024 [P] [US6] Implement Sources page (list, create with type-specific fields incl. oral-account narrator/date/recorder) and `CitationPicker` in `web/src/features/evidence/`
+- [x] T020 [US3] Implement `Canvas` (React Flow, pan/zoom, minimap, legend overlay, branch filter, drag-over rule check colouring green/amber/red, drop flows: person→person = MarriageDialog, person→union = child, child with preferred parents → "Add as alternative claim?") in `web/src/features/editor/Canvas.tsx`
+- [x] T021 [US3] Implement `CommandBar` (type name + Enter → gender → new person; lineage text → parse → pick existing/new → create chain as Unconfirmed) in `web/src/features/editor/CommandBar.tsx`
+- [x] T022 [US1] Implement `SidePanel` with `PersonForm`, `MarriageForm` (dates, end reason, divorce kind/count, status + confidence; Verified disabled until a source is cited), claim panel (status, sources, Make preferred), and `WarningDialog` (confirm warnings) in `web/src/features/editor/`
+- [x] T023 [US3] Implement undo/redo toolbar and Ctrl+Z / Ctrl+Y over `LocalStore` history in `web/src/features/editor/UndoRedo.tsx`
+- [x] T024 [P] [US6] Implement Sources page (list, create with type-specific fields incl. oral-account narrator/date/recorder) and `CitationPicker` in `web/src/features/evidence/`
 
 ### Viewing (desktop + phone)
 
-- [ ] T025 [US4] Implement the person profile (desktop drawer / phone full-screen sheet): public id, nasab, maternal line, parents and alternative claims, marriages in order with children per marriage, kinship links, sources, status badges, in `web/src/features/viewer/Profile.tsx`
-- [ ] T026 [P] [US4] Implement `AncestorLadder` (phone landing: nasab chain, each ancestor's wives, expandable children per marriage, status per link) and `MaternalLadder` in `web/src/features/viewer/`
-- [ ] T027 [P] [US4] Implement search (normalised Arabic/English + public id) for desktop and the phone tab in `web/src/features/search/Search.tsx`
-- [ ] T028 [US4] Implement view-only tree tab for phones (same Canvas with editing disabled, touch pinch/pan, legend) in `web/src/features/viewer/TreeView.tsx`
+- [x] T025 [US4] Implement the person profile (desktop drawer / phone full-screen sheet): public id, nasab, maternal line, parents and alternative claims, marriages in order with children per marriage, kinship links, sources, status badges, in `web/src/features/viewer/Profile.tsx`
+- [x] T026 [P] [US4] Implement `AncestorLadder` (phone landing: nasab chain, each ancestor's wives, expandable children per marriage, status per link) and `MaternalLadder` in `web/src/features/viewer/`
+- [x] T027 [P] [US4] Implement search (normalised Arabic/English + public id) for desktop and the phone tab in `web/src/features/search/Search.tsx`
+- [x] T028 [US4] Implement view-only tree tab for phones (same Canvas with editing disabled, touch pinch/pan, legend) in `web/src/features/viewer/TreeView.tsx`
 
 ### PWA & feedback
 
-- [ ] T029 [P] [US4] Implement install button (`beforeinstallprompt`), iOS "Add to Home Screen" sheet, update toast, offline banner in `web/src/features/pwa/`
-- [ ] T030 [P] Add feedback issue template `.github/ISSUE_TEMPLATE/prototype-feedback.md` (what you tried, what confused you, attach your downloaded JSON) and a "Give feedback" link in Settings
-- [ ] T031 Playwright smoke tests: add 5 wives → 5th refused; child under each wife; alternative claim flow; undo; JSON download → reset → open restores; reload keeps data; offline reload opens (service worker) in `web/tests/prototype.spec.ts`
+- [x] T029 [P] [US4] Implement install button (`beforeinstallprompt`), iOS "Add to Home Screen" sheet, update toast, offline banner in `web/src/features/pwa/`
+- [x] T030 [P] Add feedback issue template `.github/ISSUE_TEMPLATE/prototype-feedback.md` (what you tried, what confused you, attach your downloaded JSON) and a "Give feedback" link in Settings
+- [x] T031 Playwright smoke tests: add 5 wives → 5th refused; child under each wife; alternative claim flow; undo; JSON download → reset → open restores; reload keeps data; offline reload opens (service worker) in `web/tests/prototype.spec.ts`
 - [ ] T032 Deploy to GitHub Pages, run Lighthouse installability check on the deployed URL, and record the URL and feedback plan in `specs/001-family-tree-core/prototype-feedback.md`
 
 **Checkpoint (STOP)**: Collect feedback. Update spec.md/plan.md with what changed before starting Phase 1.

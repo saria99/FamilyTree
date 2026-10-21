@@ -1,0 +1,114 @@
+{
+  "description": "Rule scenarios shared by web (Vitest) and backend (xUnit). Dates are years unless [y,m,d]. persons: [id, gender, birthYear|null]. marriages: [id, husband, wife, start, end|null, endReason, status]. claims: [id, child, marriage, preferred].",
+  "cases": [
+    {
+      "name": "fourth concurrent wife is allowed",
+      "persons": [["h","M",1950],["w1","F",1955],["w2","F",1955],["w3","F",1955],["w4","F",1955]],
+      "marriages": [["m1","h","w1",1975,null,"Ongoing","Unconfirmed"],["m2","h","w2",1976,null,"Ongoing","Unconfirmed"],["m3","h","w3",1977,null,"Ongoing","Unconfirmed"]],
+      "check": { "marriage": ["h","w4",1978,null,"Ongoing","Unconfirmed"] },
+      "expect": []
+    },
+    {
+      "name": "fifth concurrent wife is refused",
+      "persons": [["h","M",1950],["w1","F",1955],["w2","F",1955],["w3","F",1955],["w4","F",1955],["w5","F",1955]],
+      "marriages": [["m1","h","w1",1975,null,"Ongoing","Unconfirmed"],["m2","h","w2",1976,null,"Ongoing","Unconfirmed"],["m3","h","w3",1977,null,"Ongoing","Unconfirmed"],["m4","h","w4",1978,null,"Ongoing","Unconfirmed"]],
+      "check": { "marriage": ["h","w5",1980,null,"Ongoing","Unconfirmed"] },
+      "expect": ["MAX_CONCURRENT_WIVES"]
+    },
+    {
+      "name": "fifth wife after a divorce and its iddah is allowed",
+      "persons": [["h","M",1950],["w1","F",1955],["w2","F",1955],["w3","F",1955],["w4","F",1955],["w5","F",1955]],
+      "marriages": [["m1","h","w1",1975,[1979,3,1],"Divorce","Unconfirmed"],["m2","h","w2",1976,null,"Ongoing","Unconfirmed"],["m3","h","w3",1977,null,"Ongoing","Unconfirmed"],["m4","h","w4",1978,null,"Ongoing","Unconfirmed"]],
+      "check": { "marriage": ["h","w5",1980,null,"Ongoing","Unconfirmed"] },
+      "expect": []
+    },
+    {
+      "name": "fifth wife during a divorced wife's iddah is a warning",
+      "persons": [["h","M",1950],["w1","F",1955],["w2","F",1955],["w3","F",1955],["w4","F",1955],["w5","F",1955]],
+      "marriages": [["m1","h","w1",1975,[1979,3,1],"Divorce","Unconfirmed"],["m2","h","w2",1976,null,"Ongoing","Unconfirmed"],["m3","h","w3",1977,null,"Ongoing","Unconfirmed"],["m4","h","w4",1978,null,"Ongoing","Unconfirmed"]],
+      "check": { "marriage": ["h","w5",[1979,4,1],null,"Ongoing","Unconfirmed"] },
+      "expect": ["FIFTH_WIFE_DURING_IDDAH"]
+    },
+    {
+      "name": "disputed fifth marriage is a warning, not a violation",
+      "persons": [["h","M",1950],["w1","F",1955],["w2","F",1955],["w3","F",1955],["w4","F",1955],["w5","F",1955]],
+      "marriages": [["m1","h","w1",1975,null,"Ongoing","Unconfirmed"],["m2","h","w2",1976,null,"Ongoing","Unconfirmed"],["m3","h","w3",1977,null,"Ongoing","Unconfirmed"],["m4","h","w4",1978,null,"Ongoing","Unconfirmed"]],
+      "check": { "marriage": ["h","w5",1980,null,"Ongoing","Disputed"] },
+      "expect": ["DISPUTED_EXCEEDS_LIMIT"]
+    },
+    {
+      "name": "woman remarries after divorce and iddah",
+      "persons": [["h1","M",1950],["h2","M",1950],["w","F",1955]],
+      "marriages": [["m1","h1","w",1975,[1978,1,10],"Divorce","Unconfirmed"]],
+      "check": { "marriage": ["h2","w",[1978,9,1],null,"Ongoing","Unconfirmed"] },
+      "expect": []
+    },
+    {
+      "name": "woman with two husbands at once is refused",
+      "persons": [["h1","M",1950],["h2","M",1950],["w","F",1955]],
+      "marriages": [["m1","h1","w",1975,null,"Ongoing","Unconfirmed"]],
+      "check": { "marriage": ["h2","w",1980,null,"Ongoing","Unconfirmed"] },
+      "expect": ["WIFE_HAS_HUSBAND"]
+    },
+    {
+      "name": "remarriage inside iddah is a warning",
+      "persons": [["h1","M",1950],["h2","M",1950],["w","F",1955]],
+      "marriages": [["m1","h1","w",1975,[1978,1,10],"Divorce","Unconfirmed"]],
+      "check": { "marriage": ["h2","w",[1978,2,1],null,"Ongoing","Unconfirmed"] },
+      "expect": ["IDDAH_OVERLAP"]
+    },
+    {
+      "name": "same-gender marriage is refused",
+      "persons": [["a","M",1950],["b","M",1950]],
+      "marriages": [],
+      "check": { "marriage": ["a","b",1975,null,"Ongoing","Unconfirmed"] },
+      "expect": ["SAME_GENDER_MARRIAGE"]
+    },
+    {
+      "name": "Verified without a source is refused",
+      "persons": [["h","M",1950],["w","F",1955]],
+      "marriages": [],
+      "check": { "marriage": ["h","w",1975,null,"Ongoing","Verified"] },
+      "expect": ["VERIFIED_REQUIRES_SOURCE"]
+    },
+    {
+      "name": "marrying a sister is a mahram warning",
+      "persons": [["f","M",1920],["mo","F",1925],["h","M",1950],["s","F",1952]],
+      "marriages": [["m1","f","mo",1945,null,"Ongoing","Unconfirmed"]],
+      "claims": [["c1","h","m1",true],["c2","s","m1",true]],
+      "check": { "marriage": ["h","s",1975,null,"Ongoing","Unconfirmed"] },
+      "expect": ["MAHRAM_BLOOD"]
+    },
+    {
+      "name": "second preferred parentage is refused",
+      "persons": [["h","M",1920],["w1","F",1925],["w2","F",1925],["c","M",1950]],
+      "marriages": [["m1","h","w1",1945,null,"Ongoing","Unconfirmed"],["m2","h","w2",1946,null,"Ongoing","Unconfirmed"]],
+      "claims": [["c1","c","m1",true]],
+      "check": { "parentage": ["c","m2",true,"Unconfirmed"] },
+      "expect": ["CHILD_HAS_PARENTS"]
+    },
+    {
+      "name": "alternative parentage claim is allowed",
+      "persons": [["h","M",1920],["w1","F",1925],["w2","F",1925],["c","M",1950]],
+      "marriages": [["m1","h","w1",1945,null,"Ongoing","Unconfirmed"],["m2","h","w2",1946,null,"Ongoing","Unconfirmed"]],
+      "claims": [["c1","c","m1",true]],
+      "check": { "parentage": ["c","m2",false,"Disputed"] },
+      "expect": []
+    },
+    {
+      "name": "child born before parent is refused",
+      "persons": [["h","M",1960],["w","F",1960],["c","M",1940]],
+      "marriages": [["m1","h","w",1980,null,"Ongoing","Unconfirmed"]],
+      "check": { "parentage": ["c","m1",true,"Unconfirmed"] },
+      "expect": ["CHILD_BORN_BEFORE_PARENT","BIRTH_OUTSIDE_MARRIAGE_PERIOD"]
+    },
+    {
+      "name": "making a person their own ancestor is refused",
+      "persons": [["a","M",1900],["aw","F",1900],["b","M",1930],["bw","F",1930]],
+      "marriages": [["m1","a","aw",1925,null,"Ongoing","Unconfirmed"],["m2","b","bw",1955,null,"Ongoing","Unconfirmed"]],
+      "claims": [["c1","b","m1",true]],
+      "check": { "parentage": ["a","m2",true,"Unconfirmed"] },
+      "expect": ["ANCESTOR_CYCLE"]
+    }
+  ]
+}
