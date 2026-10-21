@@ -1,18 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 1.1.0 → 1.2.0 (MINOR: new principles VIII and IX; Principle I child rule expanded to
-  "one preferred parentage + alternative claims"; project renamed Bayrab Genealogy)
-- Modified principles: I (child ↔ marriage rule now applies to the preferred parentage; disputed marriages
-  excluded from hard concurrency limits), V (PDF/spreadsheet outputs share the same rules), VI (attachments follow redaction)
-- Added principles: VIII. Evidence Before Assumption; IX. Stable Identity and Data Portability
-- Added sections: Mission
-- Removed sections: none
+- Version change: 1.2.0 → 2.0.0 (MAJOR: Principle V redefined from "two clients" to one React PWA; backend
+  architecture constraint changed from Clean Architecture layers to vertical slice architecture)
+- Modified principles: II (single React client), V (One API, One Installable Web Client), VII (one backend project)
+- Added sections: none
+- Removed sections: none (React Native / Expo removed from Technology constraints)
 - Templates requiring updates:
   ✅ .specify/templates/plan-template.md (Constitution Check reads gates from this file; no edit needed)
   ✅ .specify/templates/spec-template.md (no mandatory section changes)
   ✅ .specify/templates/tasks-template.md (no structural change)
-  ⚠ specs/001-family-tree-core/plan.md, research.md, data-model.md, contracts/, tasks.md — must be regenerated
-    (/speckit-plan, /speckit-tasks) to add evidence, branches, IDs, PDF, Excel/CSV
+  ✅ specs/001-family-tree-core/* regenerated on 2026-10-21 for vertical slices + PWA
 - Follow-up TODOs: none
 -->
 
@@ -58,9 +55,9 @@ recordable even when it is messy or incomplete.
 
 All relationship rules from Principle I MUST be enforced in the .NET domain layer and by
 PostgreSQL constraints where expressible (e.g. exclusion constraints on overlapping date
-ranges). React and React Native clients MAY pre-validate for fast feedback but MUST NOT be
-the only line of defense. Validation errors MUST be returned as structured problem details
-with a machine-readable code so both clients can show the same message (Arabic and English).
+ranges). The React client MAY pre-validate for fast feedback but MUST NOT be the only line of
+defense. Validation errors MUST be returned as structured problem details with a machine-readable
+code so every screen shows the same message (Arabic and English).
 
 ### III. Test-First for Domain Rules
 
@@ -76,12 +73,13 @@ inline. Every visual action maps to an explicit API command (CreatePerson, Creat
 AddChildToMarriage, EndMarriage, ...). Invalid drops MUST be rejected with a clear reason, not
 silently ignored. Destructive operations MUST be undoable or require confirmation.
 
-### V. One API, Two Clients
+### V. One API, One Installable Web Client
 
-A single versioned REST API (`/api/v1`) serves the React web app and the React Native app.
-Shared TypeScript types and validation messages MUST be generated from or kept in a shared
-package, not hand-copied between clients. The web app is the primary admin editor; the mobile
-app MUST at minimum support browsing, searching, and viewing the tree. Generated outputs (PDF charts
+A single versioned REST API (`/api/v1`) serves one React application. On desktop it is the admin
+editor; on phones it is installed as a **Progressive Web App** for members to browse, search, and view
+the tree. The PWA MUST be installable (manifest, icons, service worker), MUST be usable at phone widths
+with touch, and MUST reopen the last viewed tree read-only when offline. TypeScript API types MUST be
+generated from the OpenAPI contract, not hand-written. Generated outputs (PDF charts
 and reports, Excel/CSV/GEDCOM exports) MUST be produced by the API from the same rules and the same
 redaction as on-screen views.
 
@@ -95,8 +93,8 @@ or exports. All edits and imports MUST be audit-logged (who, what, when).
 
 ### VII. Simplicity and Bilingual (RTL) Support
 
-Start with the simplest design that satisfies the rules (YAGNI): one database, one API, no
-microservices. The UI MUST support Arabic (RTL) and English (LTR) from the first release,
+Start with the simplest design that satisfies the rules (YAGNI): one database, one backend
+project, one client application, no microservices. The UI MUST support Arabic (RTL) and English (LTR) from the first release,
 including Arabic names (ism, nasab chain "ibn/bint", laqab, kunya).
 
 ### VIII. Evidence Before Assumption (NON-NEGOTIABLE)
@@ -127,12 +125,15 @@ Rationale: the platform's value is reliability; unsupported lineage assumptions 
 
 ## Technology & Architecture Constraints
 
-- Backend: .NET (C#, latest LTS/current SDK installed), ASP.NET Core Web API, EF Core with
-  Npgsql, Clean Architecture layers (Domain, Application, Infrastructure, Api).
+- Backend: .NET (C#, latest LTS/current SDK installed), ASP.NET Core minimal APIs, EF Core with
+  Npgsql, **vertical slice architecture**: one project organised by feature
+  (`Features/<Area>/<UseCase>`). Each slice owns its endpoint, request/response, validation, and
+  handler. Cross-cutting Islamic and evidence rules live in a shared `Domain/` kernel that slices
+  call; slices MUST NOT call each other's handlers. Architecture tests enforce this.
 - Database: PostgreSQL. Schema changes only via EF Core migrations.
-- Web: React + TypeScript (Vite). Tree canvas via a graph library that supports custom nodes
-  and drag-and-drop (e.g. React Flow) with automatic layout.
-- Mobile: React Native (Expo) + TypeScript.
+- Client: React + TypeScript (Vite) as an installable PWA (web app manifest + service worker).
+  Tree canvas via a graph library that supports custom nodes, touch, and drag-and-drop (e.g. React
+  Flow) with automatic layout. No native mobile app.
 - Auth: JWT bearer tokens issued by the API (ASP.NET Core Identity).
 - Source control: Git, hosted on GitHub; Spec-Driven Development with GitHub Spec Kit.
 
@@ -151,4 +152,4 @@ principle added or materially expanded; PATCH: wording), and updates to affected
 Every plan MUST pass the Constitution Check before implementation; complexity beyond these
 rules MUST be justified in the plan's Complexity Tracking table.
 
-**Version**: 1.2.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-17
+**Version**: 2.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-21

@@ -22,7 +22,8 @@ unconfirmed relationships, so the data stays reliable and no lineage is assumed 
 ## Core capabilities
 
 - **Interactive tree**: an expandable, searchable family tree with person profiles. Admins build it visually on the web
-  (type, drag and drop); family members explore it on the web and the mobile app, landing on their own ancestors.
+  (type, drag and drop); family members explore it on desktop or on their phones, where the same web app installs as a PWA,
+  landing on their own ancestors.
 - **Genealogy records**: parents, children, spouses, maternal lineage, and extended family relationships, each person
   with a unique permanent identifier (e.g. `BYR-000123`).
 - **Evidence and verification**: sources (documents, books, official records, gravestones, photos, websites, oral
@@ -45,10 +46,9 @@ also lays the foundation for future research, collaboration, and publication.
 
 | Layer | Stack |
 |---|---|
-| API | .NET 10, ASP.NET Core Web API, EF Core + Npgsql, ASP.NET Core Identity + JWT |
+| API | .NET 10, ASP.NET Core minimal APIs, vertical slice architecture, EF Core + Npgsql, ASP.NET Core Identity + JWT |
 | Database | PostgreSQL 17 (Docker for local development) |
-| Web (admin editor + viewer) | React, TypeScript, Vite, React Flow, TanStack Query, i18next |
-| Mobile (viewer) | React Native (Expo), TypeScript |
+| Client | React, TypeScript, Vite, React Flow, TanStack Query, i18next; installable PWA (vite-plugin-pwa) for phones |
 
 ## Spec-Driven Development
 

@@ -18,8 +18,8 @@ foundation for future research, collaboration, and publication. Three ideas shap
    Disputed, Unconfirmed), a confidence level, and the sources behind it. The system never invents a relationship
    and never hides the difference between a documented fact and a family story. Where sources disagree, competing
    claims are kept side by side, with one marked preferred.
-3. **Access and output** — admins build the tree visually on the web; family members explore it on the web and the
-   mobile app, landing on their own ancestors; the tree can be printed as PDF charts and reports and exchanged as
+3. **Access and output** — admins build the tree visually on the web; family members explore it on desktop or on their
+   phones through the same web app installed as a PWA, landing on their own ancestors; the tree can be printed as PDF charts and reports and exchanged as
    Excel, CSV, or GEDCOM.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -114,15 +114,16 @@ two grandchildren) using only the canvas, with no forms outside it. Confirm the 
 
 ---
 
-### User Story 4 - Members browse the tree on web and mobile (Priority: P2)
+### User Story 4 - Members browse the tree on desktop and phone (Priority: P2)
 
-Family members sign in on the website or the mobile app to explore the tree: zoom and pan, tap a person to see
+Family members sign in on the website, on desktop or on their phone where it can be installed as an app
+(Progressive Web App), to explore the tree: zoom and pan, tap a person to see
 their details, spouses (with marriage periods), children grouped by marriage, and their full nasab chain
 ("X ibn Y ibn Z"). They can search by name in Arabic or English and jump to that person.
 
 **Why this priority**: Viewing is the main use for most family members but depends on data from P1 stories.
 
-**Independent Test**: With a pre-built tree, a member on the phone app searches for a grandchild, opens their card,
+**Independent Test**: With a pre-built tree, a member using the installed app on a phone searches for a grandchild, opens their card,
 and navigates up to the great-grandfather and then across to a half-uncle from a different wife.
 
 **Acceptance Scenarios**:
@@ -131,6 +132,10 @@ and navigates up to the great-grandfather and then across to a half-uncle from a
 2. **Given** a person's card, **When** opened, **Then** it shows the nasab chain up to the earliest known paternal ancestor.
 3. **Given** the app language is Arabic, **When** the tree is shown, **Then** text and layout are right-to-left.
 4. **Given** a member who is not an admin, **When** they try to edit, **Then** editing controls are not available.
+5. **Given** a phone browser, **When** the member chooses "Add to home screen", **Then** the app installs with its own icon
+   and opens full-screen.
+6. **Given** an installed app that has opened a tree before, **When** the phone is offline, **Then** the last viewed tree,
+   profiles, and ancestor view open read-only with an "Offline" notice.
 
 ---
 
@@ -180,7 +185,7 @@ dashed with a "Disputed" badge; the person's profile lists both claims with thei
    date told, recorder, and optional audio/text attachment.
 5. **Given** a source cited by Verified relationships, **When** the admin deletes it, **Then** a warning lists the
    affected relationships, and on confirmation those without another source drop to "Unconfirmed".
-6. **Given** any viewer (web, mobile, PDF), **When** a relationship is shown, **Then** its status is visible through a
+6. **Given** any viewer (desktop, phone, PDF), **When** a relationship is shown, **Then** its status is visible through a
    line style and badge explained by a legend.
 
 ---
@@ -334,7 +339,8 @@ two updates and one creation; after commit the tree reflects them and history at
 
 **Viewing, search, language**
 
-- **FR-020**: Members MUST be able to view the tree on the website and on the mobile app (iOS and Android), with zoom,
+- **FR-020**: Members MUST be able to view the tree in desktop and phone browsers and install the web app on iOS and
+  Android home screens (PWA) that reopens the last viewed tree read-only when offline, with zoom,
   pan, collapse/expand branches, and a person detail view.
 - **FR-021**: Users MUST be able to search people by any name in Arabic or English, ignoring diacritics (tashkeel) and hamza spelling differences.
 - **FR-022**: The whole interface MUST be available in Arabic (right-to-left) and English (left-to-right).
@@ -366,7 +372,7 @@ two updates and one creation; after commit the tree reflects them and history at
   Recording an alternative claim MUST mark all of that person's parentage claims Disputed unless the admin resolves it.
 - **FR-032**: The system MUST NOT create or infer a relationship that the admin did not enter (e.g. it never assumes a
   child's mother from the father's only wife, nor a marriage from shared children).
-- **FR-033**: Every view and output (web canvas, mobile, profiles, PDFs, exports) MUST show each relationship's status with a
+- **FR-033**: Every view and output (canvas on desktop and phone, profiles, PDFs, exports) MUST show each relationship's status with a
   consistent visual language (e.g. solid = Verified, dashed = Oral account, dotted red = Disputed, grey = Unconfirmed) and a legend.
 - **FR-034**: Admins MUST be able to list and filter relationships by status, confidence, and "has no source" to drive research.
 
@@ -455,7 +461,13 @@ two updates and one creation; after commit the tree reflects them and history at
   maternal lineage, branches, unique IDs, PDF, Excel/CSV, scale to thousands of individuals).
 - Q: When sources disagree about a relationship? → A: Competing claims, each with its own sources and status; one is
   preferred and drawn as the main line, the others as dashed alternatives.
-- Q: Who sees non-Verified relationships? → A: Everyone, clearly marked with line style, badge, and legend (web, mobile, PDF).
+- Q: Who sees non-Verified relationships? → A: Everyone, clearly marked with line style, badge, and legend (desktop, phone, PDF).
+
+### Session 2026-10-21
+
+- Q: Technology for the plan? → A: .NET C# backend with vertical slice architecture, PostgreSQL, React as a PWA.
+- Q: Does the PWA replace the native mobile app? → A: Yes. One React app: admin editor on desktop, installable viewer
+  on phones; no React Native app.
 
 ## Assumptions
 
@@ -474,6 +486,7 @@ two updates and one creation; after commit the tree reflects them and history at
 - Mahram checks are limited to what the recorded data proves. Missing links mean no block.
 - The triple-divorce rule (no remarriage to the same wife after a third divorce without an intervening marriage) is a warning,
   because older records are often incomplete.
-- Editing is done only by admins on the web app. The mobile app is for users to view and search (no editing).
+- Editing is done only by admins in the web app on desktop. On phones, the installed web app (PWA) is for viewing and
+  searching (no editing).
 - Hijri and Gregorian dates are both stored and converted for display. Exact day conversion may vary by one day, which is acceptable.
 - Email delivery is available for invitations and password resets.

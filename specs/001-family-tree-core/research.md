@@ -1,7 +1,8 @@
 # Research: Bayrab Genealogy — Core Platform
 
 **Feature**: 001-family-tree-core | **Date**: 2026-10-06 | **Revised**: 2026-10-17 (Bayrab elaboration R17–R27,
-analysis fixes C1, C2, D1, I1, U1, U2, G1–G5)
+analysis fixes C1, C2, D1, I1, U1, U2, G1–G5) | **Revised**: 2026-10-21 (vertical slice backend, React PWA
+replaces React Native: R8, R11, R12, R16, R22 updated; R28–R30 added)
 
 Each item: Decision / Rationale / Alternatives considered.
 
@@ -56,8 +57,8 @@ Each item: Decision / Rationale / Alternatives considered.
 
 ## R4. Mahram detection
 
-- **Decision**: A pure C# `KinshipService` in the Domain layer. For a proposed couple (H, W), the Application
-  layer loads the **relevant subgraph** with a recursive CTE: ancestors of H and W (up to 6 generations) plus their
+- **Decision**: A pure C# `KinshipService` in the shared `Domain/` kernel. For a proposed couple (H, W), the calling
+  slice loads the **relevant subgraph** (via the shared `KinshipSubgraphQuery`) with a recursive CTE: ancestors of H and W (up to 6 generations) plus their
   descendants down to the generation needed (siblings, nieces/nephews), plus current/former spouses and milk-kinship
   links. The service then checks the classical categories (Qur'an 4:22–23):
   ancestors, descendants, siblings (full/half), siblings' descendants, parents' siblings (aunts/uncles at any
@@ -96,10 +97,13 @@ Each item: Decision / Rationale / Alternatives considered.
 ## R8. Auth
 
 - **Decision**: ASP.NET Core Identity (users in PostgreSQL) + JWT access tokens (15 min) and rotating refresh
-  tokens (30 days, hashed in DB). Web stores the access token in memory and the refresh token in an HttpOnly
-  cookie; mobile stores the refresh token in `expo-secure-store`. Invitations: signed single-use token by email.
-- **Rationale**: Constitution tech constraints; one mechanism for web and mobile.
-- **Alternatives**: Cookie-only auth → awkward for React Native; external IdP → extra dependency for v1.
+  tokens (30 days, hashed in DB). The React app keeps the access token in memory; the refresh token is an
+  `HttpOnly; Secure; SameSite=Strict` cookie scoped to `/api/v1/auth`. The app is served from the **same origin** as
+  the API (R30), so the cookie also works in installed iOS PWAs, which block third-party cookies. Invitations use a
+  signed single-use token sent by email.
+- **Rationale**: Constitution tech constraints; one client, one mechanism; no token in JS-readable storage.
+- **Alternatives**: Refresh token in localStorage → exposed to XSS; cookie-only sessions → fine too, but JWT keeps
+  `/api/v1` usable by scripts and tests without CSRF plumbing.
 
 ## R9. Living-person redaction and public trees
 
@@ -126,27 +130,33 @@ Each item: Decision / Rationale / Alternatives considered.
 - **Alternatives**: D3 custom → more code; GoJS/yFiles → commercial licence; family-chart libs → cannot model
   multiple concurrent unions cleanly.
 
-## R11. Mobile viewer
+## R11. Phone viewer (inside the same React PWA)
 
-- **Decision**: Expo (latest stable SDK at scaffold time) + TypeScript, read-only. Default landing: **ancestor view**
-  of the signed-in user's linked person (or a chosen person): vertical list/ladder of the nasab chain with each
-  ancestor's wives, expandable into descendants. Tree canvas uses `react-native-svg` + `react-native-gesture-handler`
-  / `reanimated` for pan/zoom, consuming the **same layout function** from `packages/shared` (elkjs is pure JS).
-  Data via TanStack Query with persisted cache for offline re-open.
-- **Rationale**: Clarification "editing on web by admin, viewing on mobile by user"; ancestor view is the purpose.
+- **Decision**: No separate mobile codebase. Below 768 px wide the app switches to a **phone layout**: a bottom tab bar
+  (Lineage, Tree, Search, Settings), full-screen sheets for profiles and sources, and touch targets of 44 px or more.
+  The default landing is the **ancestor view** (`AncestorLadder`) of the signed-in user's linked person (or the tree
+  root): a vertical list of the nasab chain with each ancestor's wives, expandable into children per marriage, and a
+  status badge on every link. "Show as tree" opens the same React Flow canvas in view-only mode, where pinch-zoom and
+  pan work on touch. Editing controls are never shown on phones (members view only; admins see "Editing is available
+  on desktop").
+- **Rationale**: Clarifications "admins edit on web, users view on phones" and 2026-10-21 "PWA replaces React Native".
+  One component set for desktop and phone halves the UI work.
+- **Alternatives**: A separate mobile web route tree → duplicate pages; a native app → dropped by the user.
 
 ## R12. Shared contracts between clients
 
-- **Decision**: Backend publishes OpenAPI via `Microsoft.AspNetCore.OpenApi` (.NET 10). `packages/shared` generates
-  TS types with `openapi-typescript` and exports a typed `openapi-fetch` client, rule-code → message maps
-  (ar/en), Arabic name normalisation, nasab formatting, and the layout function. npm workspaces at the repo root.
-- **Rationale**: Principle V (no hand-copied types).
+- **Decision**: The backend publishes OpenAPI via `Microsoft.AspNetCore.OpenApi` (.NET 10). The web app generates
+  TS types with `openapi-typescript` into `web/src/api/schema.d.ts` and uses a typed `openapi-fetch` client. With
+  only one client there is no shared npm package and no workspaces. Logic that must match C# exactly (Arabic
+  normalisation, nasab formatting) is checked against shared JSON test vectors in `test-vectors/` at the repo root,
+  read by both the xUnit and the Vitest suites.
+- **Rationale**: Principle V (generated types) and Principle VII (no package that has only one consumer).
 
 ## R13. Arabic/English search
 
 - **Decision**: Store `search_text` per person = normalised concatenation of all name fields
   (remove tashkeel and tatweel; أ/إ/آ/ٱ → ا; ة → ه; ى → ي; ؤ → و; ئ → ي; lowercase Latin; strip "al-"/"ال" variant
-  separators). Same normaliser in C# and TS (shared test vectors). Index with `pg_trgm` GIN; query with `%` similarity
+  separators). Same normaliser in C# and TS (test vectors in `test-vectors/`). Index with `pg_trgm` GIN; query with `%` similarity
   + `ILIKE` prefix. Transliteration between scripts is not automatic: both names are entered by the admin.
 - **Rationale**: FR-021 and SC-004 (<1 s) on 5k–50k rows is trivial for trigram indexes.
 
@@ -173,7 +183,7 @@ Each item: Decision / Rationale / Alternatives considered.
 
 - **Decision**: `GET /trees/{id}/graph` returns a compact payload (ids, names, gender, years, living flag,
   union links) — ~150 bytes/person, ~0.75 MB for 5k people before gzip/Brotli. Person-centred endpoints
-  (`/ancestors`, `/descendants?depth=`) for mobile. Web collapses branches beyond 4 generations from the focus person.
+  (`/ancestors`, `/descendants?depth=`) for the phone layout. Web collapses branches beyond 4 generations from the focus person.
 - **Rationale**: SC-004 (5k people usable in <3 s on mid-range phone).
 
 ## R17. Parentage claims (competing claims, one preferred)
@@ -240,11 +250,12 @@ Each item: Decision / Rationale / Alternatives considered.
 
 ## R22. Status visual language (shared)
 
-- **Decision**: One style table in `packages/shared/src/status/styles.ts`, mirrored in C# for PDFs: Verified = solid,
+- **Decision**: One style table in `web/src/shared/status/styles.ts`, mirrored in C# `StatusPdfStyles` for PDFs (both checked
+  against `test-vectors/status-styles.json`): Verified = solid,
   Oral account = long dash, Disputed = red dotted, Unconfirmed = grey thin dashed. The confidence level sets the line
   weight (High 2.5, Medium 1.75, Low 1). Each status also has a badge icon, so meaning never depends on colour
   alone. Alternative parentage claims are drawn as an extra edge from the alternative union, always Disputed-styled
-  (fixes G3: the canvas, mobile tree and PDFs all render kinship links and alternative claims). A legend component
+  (fixes G3: the canvas on desktop and phone and the PDFs all render kinship links and alternative claims). A legend component
   is shown in every view.
 - **Rationale**: FR-033, SC-008, and accessibility (colour plus pattern plus icon).
 
@@ -297,3 +308,61 @@ Each item: Decision / Rationale / Alternatives considered.
   placeholder marriage (spouse NULL), creating one only if none exists. The admin can split a placeholder group
   (move children to a new placeholder) or replace the placeholder spouse with a real person, which converts the
   placeholder into a normal marriage subject to all rules.
+
+## R28. Vertical slice architecture (backend)
+
+- **Decision**: One ASP.NET Core project, `backend/src/Bayrab.Api`, organised **by feature**:
+  - `Features/<Area>/<UseCase>.cs`: one file per use case (e.g. `Features/Marriages/CreateMarriage.cs`) holding its
+    `Request`/`Response` records, a `Validator` (when needed), a `Handler` class, and an `Endpoint` class implementing
+    `IEndpoint.Map(IEndpointRouteBuilder)`. A slice is split into a folder only when the file passes ~250 lines.
+  - `Domain/`: the shared kernel. It holds entities and value objects (`PartialDate`, `Verification`, `PublicId`) and
+    the pure rule services that several slices need: `MarriagePolicy`, `ParentagePolicy`, `KinshipService`,
+    `EvidencePolicy`, `LivingPolicy`, `ChartLayout`, `ArabicNormalizer`, `NasabFormatter` and `LineageParser`. It has
+    no EF Core or ASP.NET references.
+  - `Infrastructure/`: `AppDbContext`, EF configurations, migrations, interceptors (audit, search text), file store,
+    job worker, email, PDF renderers, spreadsheet/GEDCOM readers and writers.
+  - `Common/`: endpoint discovery (`IEndpoint` scan at startup), ProblemDetails mapping, tree authorization,
+    `Redactor`, `ICurrentUser`, and **shared read queries** that several slices use (`KinshipSubgraphQuery`,
+    `AncestryQueries`, `BranchMembershipQuery`).
+  - Handlers use `AppDbContext` directly (no repositories, no generic CQRS mediator). A write slice opens its own
+    transaction, applies the Domain policies and saves.
+  - **Rules**: a slice MUST NOT reference another slice's types; shared needs move to `Domain/` or `Common/`. Domain
+    MUST NOT reference `Features`, `Infrastructure` or EF Core. These are enforced by architecture tests
+    (NetArchTest.Rules) in the unit test project.
+- **Validation**: .NET 10 built-in minimal-API validation (`AddValidation()` + DataAnnotations on request records)
+  for shape and required fields. Islamic and evidence rules stay in `Domain/` policies and return `RuleResult`s.
+- **Tests**: `backend/tests/Bayrab.UnitTests` (Domain rules, layout, parsers, architecture rules) and
+  `backend/tests/Bayrab.IntegrationTests` (one test class per feature area, through HTTP, Testcontainers PostgreSQL).
+- **Rationale**: The user asked for vertical slices. Each use case (create marriage, prefer claim, import commit) is
+  readable in one place, while the Islamic rules, which must be identical everywhere, live once in the kernel.
+- **Alternatives**: Clean Architecture's four projects → the previous plan, replaced at the user's request. MediatR
+  pipeline → not needed with minimal APIs, and its licence became commercial in 2025. FluentValidation → fine, but
+  .NET 10's built-in validation covers request shape without another dependency.
+
+## R29. Progressive Web App
+
+- **Decision**: `vite-plugin-pwa` (Workbox, `generateSW`, `registerType: 'prompt'`).
+  - **Manifest**: name "Bayrab Genealogy", short name "Bayrab", `display: standalone`, `start_url: /`, theme and
+    background colours, maskable icons 192/512 px, `dir: auto`, `lang` from the user's setting.
+  - **Service worker**: it precaches the app shell (HTML, JS, CSS, fonts, icons). It does **not** cache `/api/v1`
+    JSON, so private data never sits in a shared cache. The exception is `/api/v1/trees/*/files/*` images, kept in a
+    `CacheFirst` runtime cache (max 300 entries, 30 days) for photos.
+  - **Offline data**: TanStack Query cache persisted to IndexedDB (`@tanstack/query-async-storage-persister` +
+    `idb-keyval`), keyed per user, holding the last viewed tree graph, profiles and ancestor/maternal views. On
+    logout the IndexedDB store and the photo cache are both cleared. Offline, the app shows an "Offline — read only"
+    banner and disables actions that need the network (exports, search beyond cached people).
+  - **Install**: Android/desktop Chrome uses `beforeinstallprompt` → an "Install app" button. iOS Safari has no prompt,
+    so a one-time sheet explains Share → Add to Home Screen.
+  - **Updates**: when a new service worker is waiting, a toast offers "Update now", which reloads the page.
+  - **Checks**: Lighthouse PWA/installability audit in CI on the production build; Playwright test for offline reopen.
+- **Rationale**: Principle V (installable, offline last tree) and SC-004 on phones without app stores.
+- **Alternatives**: Caching API responses in the service worker → harder to clear per user and risks serving one
+  user's data to another on a shared device; rejected in favour of the per-user IndexedDB persister.
+
+## R30. Hosting: same origin for the API and the PWA
+
+- **Decision**: In production the API serves the built React app (`web/dist` copied to `wwwroot`) with
+  `UseStaticFiles` and `MapFallbackToFile("index.html")`, so the app and `/api/v1` share one origin. In development,
+  Vite's dev server proxies `/api` to `http://localhost:5080`. One Docker image contains both.
+- **Rationale**: Same-origin cookies for refresh tokens (R8), no CORS in production, one deployable (Principle VII).
+- **Alternatives**: Separate static hosting + CORS → cross-site cookies break in iOS PWAs; rejected.

@@ -54,7 +54,7 @@ Verified requires ≥1 citation: domain rule `VERIFIED_REQUIRES_SOURCE` plus the
 |---|---|---|
 | tree_id, user_id | PK | |
 | role | smallint | 0 Owner, 1 Admin, 2 Member. Exactly ≥1 Owner per tree |
-| linked_person_id | uuid NULL | "this is me" — mobile landing ancestor view |
+| linked_person_id | uuid NULL | "this is me" — phone landing ancestor view |
 
 ### invitation
 `id, tree_id, email citext, role, token_hash, expires_at, accepted_at, invited_by`.

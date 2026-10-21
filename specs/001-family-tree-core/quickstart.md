@@ -2,12 +2,30 @@
 
 How to run everything locally and verify the core rules end-to-end.
 
-## Prerequisites
+## 0. Visual prototype (Phase 0, no backend)
+
+Needs only Node.js 24.
+
+```powershell
+cd web
+npm install
+npm run dev                       # http://localhost:5173 — fictional sample family, data kept in this browser
+npm run build; npm run preview    # production build with the service worker (to test install/offline)
+```
+
+The prototype is published to GitHub Pages by `.github/workflows/pages.yml` on every push to `main`.
+
+- **Save / share**: Settings → "Download tree (JSON)"; "Open JSON file" loads one; "Reset demo" restores the sample family.
+- **Phone**: open the Pages URL → Android: "Install app"; iOS Safari: Share → Add to Home Screen.
+- Try steps 2–10 and 12–15 below; the prototype runs the structural rules and iddah warnings in the browser
+  (mahram checks, PDFs, Excel and sharing arrive with the backend).
+
+## Prerequisites (full stack)
 
 - .NET SDK 10 (`dotnet --list-sdks` shows 10.0.x)
 - Node.js 24 + npm
 - Docker Desktop (for PostgreSQL and Testcontainers)
-- For mobile: Expo Go app on a phone, or an Android emulator / iOS simulator
+- A phone on the same network to try the installed PWA
 
 ## 1. Start PostgreSQL
 
@@ -21,27 +39,25 @@ Files (attachments, photos, exports) are stored under `backend/.data/files` by d
 
 ```powershell
 cd backend
-dotnet ef database update --project src/FamilyTree.Infrastructure --startup-project src/FamilyTree.Api
-dotnet run --project src/FamilyTree.Api     # http://localhost:5080, OpenAPI at /openapi/v1.json
+dotnet ef database update --project src/Bayrab.Api
+dotnet run --project src/Bayrab.Api         # http://localhost:5080, OpenAPI at /openapi/v1.json
 ```
 
-Seed demo data (optional): `dotnet run --project src/FamilyTree.Api -- seed-demo`
+Seed demo data (optional): `dotnet run --project src/Bayrab.Api -- seed-demo`
 
-## 3. Generate shared types and run the web admin editor
+## 3. Run the React PWA against the API
 
 ```powershell
-npm install                       # at repo root (npm workspaces)
-npm run gen:api -w packages/shared  # pulls http://localhost:5080/openapi/v1.json → src/api/schema.d.ts
-npm run dev -w web                # http://localhost:5173
+cd web
+npm install
+npm run gen:api                   # http://localhost:5080/openapi/v1.json → src/api/schema.d.ts
+$env:VITE_DATA_SOURCE="api"; npm run dev   # http://localhost:5173, /api proxied to :5080
 ```
 
-## 4. Run the mobile viewer
+## 4. Try it on a phone
 
-```powershell
-npm run start -w mobile           # scan the QR code with Expo Go
-```
-
-Set `EXPO_PUBLIC_API_URL=http://<your-LAN-IP>:5080/api/v1` in `mobile/.env` so the phone can reach the API.
+Run `npm run dev -- --host` and open `http://<your-LAN-IP>:5173` on the phone, or deploy the Docker image (the API
+serves the PWA on one origin). Install it to the home screen; open a tree once, then switch to airplane mode and reopen.
 
 ## 5. Verify the core scenarios (manual, web editor)
 
@@ -73,16 +89,17 @@ Set `EXPO_PUBLIC_API_URL=http://<your-LAN-IP>:5080/api/v1` in `mobile/.env` so t
     Edit two names, add one child row, re-import → preview shows 2 Update + 1 New → Commit → history shows one import operation.
 18. Research queue → filter "No source" → lists every Unconfirmed relationship.
 
-## 6. Verify on mobile
+## 6. Verify on a phone (installed PWA)
 
 Sign in as an invited Member whose membership is linked to "Ali". The landing screen shows Ali's ancestor
 chain (Ali ← Abdullah ← Hashim) with Abdullah's wives listed and each link's status badge; "Maternal line" lists his
-mothers; searching "عبد الله", "abdullah" or "TST-000001" finds him; the tree tab shows the status legend.
+mothers; searching "عبد الله", "abdullah" or "TST-000001" finds him; the tree tab shows the status legend. In airplane mode the
+installed app reopens the last viewed tree read-only with an "Offline" banner.
 
 ## 7. Automated tests
 
 ```powershell
-cd backend; dotnet test             # domain unit tests + API integration tests (Testcontainers PostgreSQL)
-npm test -w packages/shared         # normaliser, nasab formatter, layout
-npm test -w web                     # editor interaction tests (Vitest + Testing Library)
+cd backend; dotnet test             # unit (Domain, architecture) + integration tests (Testcontainers PostgreSQL)
+cd web; npm test                    # rules, text, layout, editor (Vitest)
+cd web; npx playwright test         # prototype + PWA install/offline smoke tests
 ```

@@ -1,58 +1,63 @@
 # Implementation Plan: Bayrab Genealogy — Core Platform
 
-**Branch**: `001-family-tree-core` | **Date**: 2026-10-06, regenerated 2026-10-17 | **Spec**: [spec.md](spec.md)
-**Input**: Feature specification from `specs/001-family-tree-core/spec.md` (elaborated 2026-10-17)
+**Branch**: `001-family-tree-core` | **Date**: 2026-10-06, regenerated 2026-10-21 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `specs/001-family-tree-core/spec.md` (elaborated 2026-10-17, stack 2026-10-21)
 
 ## Summary
 
 Bayrab Genealogy is a multi-tree genealogy platform (the Bayrab tree is the first) for documenting, exploring and
-preserving family heritage with **evidence**. Marriages follow Islamic rules: a man may have up to four concurrent wives;
-a woman one husband at a time, remarrying in sequence. Marriages are first-class **union** records, and children attach to
-unions through **parentage claims**: exactly one preferred claim drives the tree and nasab, while competing claims are
-kept with their own sources. Every relationship carries a **verification status** (Verified, Oral account, Disputed,
-Unconfirmed) and a **confidence** level; Verified requires a cited **source**. People get permanent IDs (`BYR-000123`);
-admins define **branches**; viewers follow paternal and maternal lines. Admins build the tree on a React Flow canvas in
-the web app; members view on web and the React Native (Expo) app, landing on their ancestors. The .NET 10 API also
-produces **PDF** charts and reports (QuestPDF) and **Excel/CSV/GEDCOM** imports and exports with preview-then-commit.
-PostgreSQL 17 stores everything; attachments live in a file store behind an interface.
+preserving family heritage with **evidence**. Marriages follow Islamic rules: a man may have up to four concurrent
+wives; a woman one husband at a time, remarrying in sequence. Marriages are first-class **union** records, and children
+attach to unions through **parentage claims**: one preferred claim drives the tree and nasab, while competing claims
+are kept with their own sources. Every relationship carries a **verification status** and **confidence**; Verified
+requires a cited **source**. People get permanent IDs (`BYR-000123`); admins define **branches**; viewers follow
+paternal and maternal lines.
+
+**Stack (2026-10-21)**: one **.NET 10** backend project in **vertical slice architecture**, **PostgreSQL 17**, and one
+**React PWA**: the admin editor on desktop and an installable, offline-capable viewer on phones (no native app). The API
+also produces PDFs (QuestPDF) and Excel/CSV/GEDCOM imports and exports.
+
+**Delivery order**: **Phase 0 is a visual prototype**: the React PWA with fictional sample data, all logic in the
+browser, deployed as a static site for fast feedback. Only after feedback do we build the backend and database and
+switch the app from the in-browser store to the API.
 
 ## Technical Context
 
 **Language/Version**: C# 14 / .NET 10 (SDK 10.0.301); TypeScript 5.x on Node.js 24
-**Primary Dependencies**: ASP.NET Core 10 Web API, EF Core 10 + Npgsql, ASP.NET Core Identity, JWT bearer,
-Microsoft.AspNetCore.OpenApi, QuestPDF (Community licence), ClosedXML, CsvHelper; React 19 + Vite, @xyflow/react 12,
-elkjs, TanStack Query, i18next, react-hook-form + zod; Expo (latest stable SDK) + React Native, react-native-svg,
-react-native-gesture-handler, reanimated, expo-secure-store; openapi-typescript + openapi-fetch
-**Storage**: PostgreSQL 17 (Docker locally) with `btree_gist`, `pg_trgm`, `citext`; files on a local disk volume via
-`IFileStore` (S3-compatible later)
-**Testing**: xUnit + Shouldly + Testcontainers.PostgreSql; Vitest + Testing Library (web, shared); Jest (mobile, jest-expo)
-**Target Platform**: Linux container or Windows host for API; modern evergreen browsers; iOS 16+ / Android 10+
-**Project Type**: Web service + web SPA + mobile app (monorepo)
+**Primary Dependencies**: ASP.NET Core 10 minimal APIs (built-in validation), EF Core 10 + Npgsql, ASP.NET Core
+Identity, JWT bearer, Microsoft.AspNetCore.OpenApi, QuestPDF (Community licence), ClosedXML, CsvHelper; React 19 + Vite,
+vite-plugin-pwa (Workbox), @xyflow/react 12, elkjs, TanStack Query (+ IndexedDB persister), react-router, i18next,
+react-hook-form + zod, openapi-typescript + openapi-fetch
+**Storage**: Phase 0: in-browser store (localStorage) + JSON file download/upload. Phase 1+: PostgreSQL 17
+(`btree_gist`, `pg_trgm`, `citext`); files on a disk volume via `IFileStore`
+**Testing**: xUnit + Shouldly + Testcontainers.PostgreSql + NetArchTest.Rules; Vitest + Testing Library; Playwright
+(PWA offline/install smoke); Lighthouse CI (installability)
+**Target Platform**: Linux container (API serving the PWA, same origin); evergreen desktop browsers; iOS 16.4+ Safari and
+Android Chrome (installed PWA). Phase 0: static hosting (GitHub Pages)
+**Project Type**: Web service + single React PWA
 **Performance Goals**: 5k-person tree usable in <3 s on a mid-range phone; search <1 s at 50k people; marriage rule check
 <300 ms p95; 500-person descendant PDF <30 s
-**Constraints**: Arabic RTL + English LTR everywhere (including PDFs); living-person redaction server-side in every
-output; tenant isolation per tree; no inferred relationships; status visible in every view
-**Scale/Scope**: ≥50k persons per tree, multiple branches, hundreds of trees, ~35 web screens/dialogs, ~10 mobile screens
+**Constraints**: Arabic RTL + English LTR everywhere; living-person redaction server-side; tenant isolation; no
+inferred relationships; status visible in every view; offline read of the last viewed tree on phones
+**Scale/Scope**: ≥50k persons per tree, multiple branches, hundreds of trees
 
-No open NEEDS CLARIFICATION items. Decisions: [research.md](research.md) R1–R27.
+No open NEEDS CLARIFICATION items. Decisions: [research.md](research.md) R1–R30.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.* (Constitution v1.2.0)
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.* (Constitution v2.0.0)
 
-| Principle | Gate | Pre-research | Post-design |
-|---|---|---|---|
-| I. Islamic family law is the domain model | Marriage first-class; ≤4 concurrent wives; 1 husband at a time; one *preferred* parentage per child; nasab via father; kafala separate; judgment rules = warnings; Disputed marriages excluded from hard limits | PASS | PASS — `marriage`, `parentage_claim` (partial unique preferred index), exclusion constraint with Disputed excluded, `FIFTH_WIFE_DURING_IDDAH` warning |
-| II. Server-enforced, client-mirrored | Domain + DB constraints; structured codes | PASS | PASS — exclusion constraint, row locks, composite FKs, deferred `trg_verified_has_citation`; rule-codes.md |
-| III. Test-first; every endpoint integration-tested | Allowed + rejected test per rule; Testcontainers per endpoint | PASS | PASS — tasks pair every rule code and every endpoint group (incl. validate, lineage, merge, claims, sources, branches, exports, imports) with tests (analysis fix C2) |
-| IV. Visual, forgiving editing | Gesture = API command; invalid drops explained; undo | PASS | PASS — `/validate/*` dry-runs, soft delete + `/restore` (persons, marriages, claims), command stack |
-| V. One API, two clients; outputs from the API | Shared generated types; PDFs/exports generated server-side | PASS | PASS — OpenAPI → `packages/shared`; QuestPDF/ClosedXML in Infrastructure; same Redactor |
-| VI. Privacy & roles | Living redaction everywhere; audit | PASS | PASS — `Redactor` built in Phase 2 **before** any anonymous access is allowed (analysis fix C1); applies to files, PDFs, exports, search |
-| VII. Simplicity & bilingual | One DB, one API, no extra infra; RTL/LTR | PASS | PASS — background jobs via hosted service + table (no Hangfire); local disk store; Arabic font embedded in PDFs |
-| VIII. Evidence before assumption | Status + confidence on every relationship; Verified needs source; no inference; competing claims; legend everywhere | PASS | PASS — verification columns, `citation` with single-target CHECK, lineage commit defaults Unconfirmed, shared status style table (R22) |
-| IX. Stable identity & portability | Permanent IDs; lossless GEDCOM/Excel/CSV; preview imports; scale | PASS | PASS — `public_id` counter (R20), import_batch preview/commit (R25), round-trip tests, 50k performance test |
-
-No violations → Complexity Tracking empty.
+| Principle | Gate | Result |
+|---|---|---|
+| I. Islamic family law is the domain model | ≤4 concurrent wives; 1 husband at a time; one preferred parentage; Disputed excluded from hard limits; judgment rules = warnings | PASS — `Domain/` kernel policies; DB exclusion constraint; partial unique preferred index. Phase 0 mirrors the structural rules in TypeScript |
+| II. Server-enforced, client-mirrored | Domain + DB constraints | PASS for the product. **Phase 0 exception**: rules run only in the browser (see Complexity Tracking) |
+| III. Test-first; every endpoint integration-tested | | PASS — one integration test class per feature area; unit tests for every rule code; Phase 0 rule ports have Vitest tests |
+| IV. Visual, forgiving editing | Gestures = commands; drops explained; undo | PASS — Phase 0 builds exactly this experience first |
+| V. One API, one installable web client | Generated types; PWA installable; offline last tree | PASS — vite-plugin-pwa (R29); OpenAPI → `web/src/api` (R12) |
+| VI. Privacy & roles | Redaction everywhere; audit | PASS — Redactor in Phase 2 before anonymous access. **Phase 0 holds fictional data only** |
+| VII. Simplicity | One DB, one backend project, one client | PASS — single `Bayrab.Api` project, single `web/` app, no shared npm package |
+| VIII. Evidence before assumption | Status + confidence on every relationship; Verified needs source | PASS — data model + `EvidencePolicy`; Phase 0 shows statuses, legend and the Verified-needs-source rule |
+| IX. Stable identity & portability | Permanent IDs; lossless exports; preview imports | PASS — `public_id`; import_batch; Phase 0 JSON file uses the same ids |
 
 ## Project Structure
 
@@ -60,103 +65,99 @@ No violations → Complexity Tracking empty.
 
 ```text
 specs/001-family-tree-core/
-├── plan.md              # This file
-├── research.md          # Decisions R1–R27
-├── data-model.md        # Tables, constraints, rule codes, state transitions
-├── quickstart.md        # Run + manual verification script
-├── contracts/
-│   ├── openapi.yaml     # REST contract /api/v1 (v1.1.0)
-│   └── rule-codes.md    # Violation/warning codes + ar/en messages
-├── checklists/
-│   └── requirements.md
-└── tasks.md             # /speckit-tasks output
+├── plan.md  research.md (R1–R30)  data-model.md  quickstart.md  tasks.md
+├── contracts/ (openapi.yaml, rule-codes.md)
+└── checklists/requirements.md
 ```
 
 ### Source Code (repository root)
 
 ```text
-docker-compose.yml                 # postgres:17 (+ api later); volume for /data/files
-package.json                       # npm workspaces: web, mobile, packages/*
+test-vectors/                      # JSON vectors shared by xUnit and Vitest (normalize, nasab, status styles, rules)
+docker-compose.yml                 # postgres:17 (+ api image later)
 backend/
-├── FamilyTree.sln
+├── Bayrab.sln
+├── src/Bayrab.Api/                # ONE project, vertical slices (R28)
+│   ├── Program.cs                 # DI, auth, OpenAPI, IEndpoint discovery, static PWA + fallback (R30)
+│   ├── Features/                  # one file per use case: Request/Response + Handler + Endpoint
+│   │   ├── Auth/                  # Register, Login, Refresh, Logout, ForgotPassword, ResetPassword, GetMe
+│   │   ├── Trees/                 # CreateTree, GetTree, UpdateTree, DeleteTree, ListTrees
+│   │   ├── Members/               # ListMembers, UpdateMember, RemoveMember, CreateInvitation, AcceptInvitation
+│   │   ├── People/                # CreatePerson, UpdatePerson, DeletePerson, RestorePerson, GetPersonDetail,
+│   │   │                          # SetPersonPhoto, DeletePersonPhoto, MergePersons
+│   │   ├── Marriages/             # CreateMarriage, UpdateMarriage, DeleteMarriage, RestoreMarriage, ValidateMarriage
+│   │   ├── Parentage/             # CreateParentageClaim, UpdateParentageClaim, DeleteParentageClaim,
+│   │   │                          # RestoreParentageClaim, PreferParentageClaim, ValidateParentage, ListParentageClaims
+│   │   ├── Kinship/               # CreateKinshipLink, UpdateKinshipLink, DeleteKinshipLink
+│   │   ├── Evidence/              # Sources (Create/Update/Delete/List/Get/AttachFile/DetachFile),
+│   │   │                          # Citations (Create/Update/Delete), ListRelationships
+│   │   ├── Branches/              # CreateBranch, UpdateBranch, DeleteBranch, ListBranches
+│   │   ├── Viewing/               # GetTreeGraph, GetAncestors, GetDescendants, GetMaternalLine, SearchPersons
+│   │   ├── Lineage/               # ParseLineage, CommitLineage
+│   │   ├── History/               # GetHistory
+│   │   ├── Files/                 # DownloadFile
+│   │   ├── Exports/               # CreateExport, GetExport, DownloadExport (+ Pdf/Excel/Csv/Gedcom handlers)
+│   │   └── Imports/               # GetImportTemplate, CreateImport (preview), GetImport, CommitImport, DiscardImport
+│   ├── Domain/                    # shared kernel, no EF/ASP.NET: entities, PartialDate, Verification, PublicId,
+│   │                              # MarriagePolicy, ParentagePolicy, KinshipService, EvidencePolicy, LivingPolicy,
+│   │                              # ChartLayout, ArabicNormalizer, NasabFormatter, LineageParser, Rules/
+│   ├── Infrastructure/            # AppDbContext, Configurations, Migrations, Interceptors, Files, Jobs, Email,
+│   │                              # Pdf (QuestPDF), Spreadsheets (ClosedXML, CsvHelper), Gedcom
+│   └── Common/                    # IEndpoint, ProblemMapping, TreeAuthorization, Redactor, CurrentUser,
+│                                  # shared queries: KinshipSubgraphQuery, AncestryQueries, BranchMembershipQuery
+└── tests/
+    ├── Bayrab.UnitTests/          # Domain rules, layout, parsers, architecture rules (NetArchTest)
+    └── Bayrab.IntegrationTests/   # one class per feature area, HTTP + Testcontainers PostgreSQL
+web/                               # the single React PWA
+├── public/                        # icons (192/512 maskable), robots.txt
 ├── src/
-│   ├── FamilyTree.Domain/         # Pure domain (no EF)
-│   │   ├── People/                # Person, Gender, NameParts, PublicId
-│   │   ├── Marriages/             # Marriage, EndReason, DivorceKind, MarriagePolicy
-│   │   ├── Parentage/             # ParentageClaim, ParentagePolicy (preferred/alternative, dates, cycles)
-│   │   ├── Evidence/              # VerificationStatus, Confidence, Source, Citation, EvidencePolicy
-│   │   ├── Kinship/               # KinshipGraph, KinshipService (mahram, combination), KinshipLink
-│   │   ├── Branches/              # Branch
-│   │   ├── Dates/                 # PartialDate, HijriConverter
-│   │   ├── Rules/                 # RuleCode, RuleResult, RuleOutcome, RuleMessages
-│   │   ├── Text/                  # ArabicNormalizer, NasabFormatter, LineageParser
-│   │   └── Charts/                # ChartLayout (tidy tree with unions) used by PDFs
-│   ├── FamilyTree.Application/    # Commands/queries, DTOs, Redactor, authorization requirements
-│   │   ├── Trees/ People/ Marriages/ Parentage/ Kinship/ Evidence/ Branches/ Lineage/ Search/
-│   │   ├── History/ Exports/ Imports/ Privacy/
-│   │   └── Abstractions/          # IAppDbContext, ICurrentUser, IClock, IEmailSender, IFileStore, IJobQueue
-│   ├── FamilyTree.Infrastructure/ # EF Core, migrations, interceptors, CTE queries, Identity/JWT, email,
-│   │                              # LocalDiskFileStore, JobWorker, Pdf/ (QuestPDF), Spreadsheets/ (ClosedXML, CsvHelper), Gedcom/
-│   └── FamilyTree.Api/            # Minimal API endpoint groups, ProblemDetails mapping, OpenAPI, auth setup
-└── tests/
-    ├── FamilyTree.Domain.Tests/        # rule unit tests (allowed + rejected for every code), layout, parsers
-    └── FamilyTree.Api.IntegrationTests/ # WebApplicationFactory + Testcontainers PostgreSQL, one file per endpoint group
-packages/
-└── shared/
-    ├── src/api/                   # schema.d.ts (generated), client.ts (openapi-fetch)
-    ├── src/rules/messages.ts      # rule code → ar/en
-    ├── src/status/styles.ts       # verification status → line style, weight, badge, colour (R22)
-    ├── src/text/                  # normalizeArabic, formatNasab (shared test vectors with C#)
-    ├── src/layout/                # graph → ELK → positions (unions, claims, kinship links; web + mobile)
-    └── src/i18n/                  # ar.json, en.json
-web/                               # Admin editor + member viewer (React + Vite)
-├── src/
-│   ├── app/                       # router, auth provider, query client, i18n/RTL
-│   ├── components/                # PartialDateInput, StatusBadge, StatusLegend, VerificationFields, FileUpload
-│   ├── features/auth/ trees/ members/ history/
-│   ├── features/people/ marriages/ parentage/   # forms, profile page
-│   ├── features/evidence/         # SourcesPage, SourceForm, CitationPicker, ResearchQueue
-│   ├── features/branches/         # BranchesPage, BranchFilter
-│   ├── features/editor/           # Canvas, nodes (PersonNode, UnionNode), edges (StatusEdge), CommandBar,
-│   │                              # SidePanel, dialogs, commands/ (undo/redo), layout.worker.ts
-│   ├── features/viewer/           # read-only viewer, public viewer
-│   ├── features/exports/          # ExportDialog (PDF/Excel/CSV/GEDCOM), job polling
-│   └── features/imports/          # ImportWizard (upload → preview grid → commit)
-└── tests/
-mobile/                            # Viewer (Expo, read-only)
-├── app/                           # expo-router: (auth)/login, (tabs)/lineage, tree, search, settings,
-│                                  # person/[id], person/[id]/maternal, sources/[id], public/[treeId]
-├── src/components/                # AncestorLadder, MaternalLadder, TreeCanvas (svg), PersonCard, MarriageGroup,
-│                                  # StatusBadge, StatusLegend, ClaimList
-└── tests/
+│   ├── app/                       # router, providers, i18n/RTL, responsive shell (desktop / phone layouts)
+│   ├── data/                      # DataSource interface; Phase 0: LocalStore (in-browser) + sampleFamily.ts;
+│   │                              # Phase 4+: ApiStore (openapi-fetch) — screens depend only on the interface
+│   ├── domain/                    # TS rule ports for Phase 0 + client pre-validation later (rules, nasab, normalize)
+│   ├── api/                       # schema.d.ts (generated), client.ts
+│   ├── shared/                    # status/styles.ts, components (StatusBadge, StatusLegend, PartialDateInput, ...)
+│   ├── features/
+│   │   ├── editor/                # Canvas, nodes, StatusEdge, CommandBar, SidePanel, dialogs, commands (undo/redo)
+│   │   ├── layout/                # elkjs graph → positions (worker)
+│   │   ├── people/ marriages/ parentage/ evidence/ branches/
+│   │   ├── viewer/                # read-only canvas, AncestorLadder, MaternalLadder, profile sheet (phone + desktop)
+│   │   ├── search/ settings/ auth/ trees/ members/ history/ exports/ imports/
+│   │   └── pwa/                   # install prompt, iOS install sheet, update toast, offline banner
+│   └── main.tsx
+├── vite.config.ts                 # vite-plugin-pwa, /api proxy in dev
+└── tests/                         # Vitest + Playwright
 ```
 
-**Structure Decision**: Monorepo with `backend/` (.NET Clean Architecture, 4 projects + 2 test projects), `web/`,
-`mobile/`, and `packages/shared/`. npm workspaces; no extra services beyond PostgreSQL.
+**Structure Decision**: One backend project with vertical slices plus a shared `Domain/` kernel; one React PWA. The
+React screens talk to a `DataSource` interface so the Phase 0 in-browser store can be swapped for the API without
+rewriting the UI.
+
+## Phasing
+
+| Phase | Outcome | Backend? |
+|---|---|---|
+| **0. Visual prototype** | PWA with fictional sample family: canvas editing, rules in the browser, statuses, ancestor/maternal views, phone layout, Arabic/English, JSON file save/load, GitHub Pages deploy | No |
+| 1–2. Setup + foundation | Solution, schema, auth, trees, redaction, files, jobs | Yes |
+| 3–11. Stories | US1, US2, US6, US3 (switch canvas to API), US4, US7, US5, US8, US9 | Yes |
+| 12. Polish | Seed, performance, RTL/accessibility, security, packaging | Yes |
 
 ## Key design notes
 
-1. **Marriage creation** (FR-004–FR-009, FR-044): transaction → `SELECT … FOR UPDATE` on husband and wife → load marriages
-   + kinship subgraph (CTE depth 6) → `MarriagePolicy` (Disputed excluded from limits; iddah-extended overlap → warning)
-   + `KinshipService` → 422 / 409 / insert + acknowledgements. Exclusion-constraint race → 422 `WIFE_HAS_HUSBAND`.
-2. **Parentage** (FR-010, FR-031, FR-045): `POST …/parentage-claims` with `asPreferred`; second preferred → 422
-   `CHILD_HAS_PARENTS` (UI offers "add as alternative"); alternative → all claims Disputed unless `keepStatuses`.
-   Cycle check walks all claims; lineage queries follow preferred claims only. Unknown parent → reuse placeholder (R27).
-3. **Evidence** (FR-028–FR-034): `EvidencePolicy` refuses Verified without citations; deferred trigger as backstop;
-   deleting a source → `SOURCE_IN_USE` → downgrade on acknowledgement. Quick lineage entry never sets Verified unless a
-   source is supplied.
-4. **Editor drop flow** (FR-014/016): drag-over → debounced `/validate/marriage` or `/validate/parentage` → green/amber/red;
-   drop red → reason tooltip; amber → `WarningDialog`; green → `MarriageDialog` or claim created. Dropping a person who
-   already has preferred parents onto a union opens "Add as alternative claim?".
-5. **Rendering statuses** (FR-033, SC-008): `StatusEdge` (web) and `TreeCanvas` (mobile) draw edges from the shared style
-   table; alternative claims and kinship links are drawn as their own edges (fix G3); `StatusLegend` in every view and PDF.
-6. **Redaction first** (C1): Phase 2 builds `Redactor` + tests; until then, the `TreeViewer` policy rejects anonymous users.
-7. **Exports/imports** (FR-039–FR-043, FR-019): `export_job` + hosted worker; PDFs via `ChartLayout` + QuestPDF with Noto
-   Naskh Arabic; imports parse to `import_batch` preview and commit through the same Application commands under one
-   correlation id; GEDCOM import uses the same pipeline (U2).
-8. **Ancestor & maternal views** (FR-023, FR-036): `/ancestors` (paternal chain + mothers + each ancestor's unions) and
-   `/maternal-line`; mobile renders ladders with a "Show as tree" toggle.
+1. **Marriage creation** (FR-004–FR-009, FR-044): `Features/Marriages/CreateMarriage.cs` → transaction →
+   `SELECT … FOR UPDATE` on both spouses → `KinshipSubgraphQuery` → `MarriagePolicy` + `KinshipService` → 422 / 409 /
+   insert + acknowledgements. Exclusion-constraint race → 422 `WIFE_HAS_HUSBAND`.
+2. **Parentage** (FR-010, FR-031, FR-045): `CreateParentageClaim` with `asPreferred`; second preferred → 422
+   `CHILD_HAS_PARENTS` (UI offers "add as alternative"). Cycle check walks all claims; lineage follows preferred claims.
+3. **Evidence** (FR-028–FR-034): `EvidencePolicy` + deferred DB trigger; `DeleteSource` → `SOURCE_IN_USE` → downgrade.
+4. **Editor drop flow**: drag-over → Phase 0: local rule check; later `/validate/*` → green/amber/red → dialog or reason.
+5. **Status rendering**: `StatusEdge` from `web/src/shared/status/styles.ts`; `StatusPdfStyles` mirrors it (test vector).
+6. **Redaction first** (C1): `Common/Redactor` in Phase 2; anonymous access denied until then.
+7. **PWA** (R29): shell precache; per-user IndexedDB query cache; photo runtime cache; cleared on logout.
+8. **Same origin** (R30): the API serves `web/dist`; dev uses the Vite proxy.
 
 ## Complexity Tracking
 
-> No constitution violations; nothing to justify.
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|---|---|---|
+| Phase 0 runs rules only in the browser (Principle II) and has no auth/redaction (Principle VI) | Get visual feedback on the editing and viewing experience in days, deployable as a static site | Building the backend first delays feedback on the UI, the riskiest part. Mitigation: fictional data only, a "Prototype — sample data" banner, no real family records; Phase 0 ends before any real data is entered |
