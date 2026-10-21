@@ -3,6 +3,7 @@ import { setLanguage, useLang } from '../../app/i18n'
 import { useStoreApi, useTreeData } from '../../app/store'
 import { downloadTree, readTreeFile } from '../../data/jsonFile'
 import { createSampleFamily } from '../../data/sampleFamily'
+import { createBayrabSeed } from '../../data/seed'
 import { InstallButton } from '../pwa/pwa'
 
 const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_URL as string | undefined
@@ -51,10 +52,18 @@ export function SettingsPage() {
           <button
             className="btn danger"
             onClick={() => {
-              if (window.confirm(t('settings.resetConfirm'))) replace('Reset demo', createSampleFamily())
+              if (window.confirm(t('settings.resetConfirm'))) replace('Reset to seed', createBayrabSeed())
             }}
           >
             {t('settings.reset')}
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              if (window.confirm(t('settings.resetConfirm'))) replace('Load demo family', createSampleFamily())
+            }}
+          >
+            {t('settings.loadDemo')}
           </button>
           {message && <p className="small" role="status">{message}</p>}
         </div>

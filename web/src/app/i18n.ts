@@ -4,7 +4,7 @@ import type { Lang } from '../domain/text'
 
 const en = {
   appName: 'Bayrab Genealogy',
-  prototypeBanner: 'Prototype — fictional sample data, saved only in this browser',
+  prototypeBanner: 'Prototype — your changes are saved only in this browser',
   nav: { editor: 'Editor', lineage: 'Lineage', tree: 'Tree', search: 'Search', sources: 'Sources', settings: 'Settings' },
   actions: {
     add: 'Add', save: 'Save', cancel: 'Cancel', confirm: 'Confirm', delete: 'Delete', close: 'Close', undo: 'Undo', redo: 'Redo',
@@ -26,7 +26,7 @@ const en = {
   person: {
     title: 'Person', ismAr: 'Name (Arabic)', ismEn: 'Name (English)', laqabAr: 'Laqab (Arabic)', laqabEn: 'Laqab (English)',
     gender: 'Gender', birth: 'Birth', death: 'Death', living: 'Living', notes: 'Notes', id: 'ID',
-    parents: 'Parents', marriages: 'Marriages', childrenWith: 'Children with {{name}}', noChildren: 'No children recorded',
+    parents: 'Parents', marriages: 'Marriages', childrenWith: 'Children with {{name}}', noChildren: 'No children recorded', noMarriages: 'No marriages recorded',
     nasab: 'Nasab (paternal line)', maternal: 'Maternal line', claims: 'Parentage claims', preferred: 'Preferred', alternative: 'Alternative',
     unknownParents: 'Parents not recorded', guardian: 'Guardian (kafala)', milkMother: 'Milk mother', milkFather: 'Milk father', kinship: 'Other relationships',
     sources: 'Sources', setAsMe: 'This is me', isMe: 'You',
@@ -53,8 +53,8 @@ const en = {
   search: { placeholder: 'Search by name (Arabic or English) or ID', none: 'No matches' },
   lineage: { title: 'My lineage', pick: 'Choose whose lineage to show', wives: 'Wives', showTree: 'Show as tree' },
   settings: {
-    language: 'Language', data: 'Data', download: 'Download tree (JSON)', open: 'Open JSON file', reset: 'Reset demo',
-    resetConfirm: 'Replace the current tree with the sample family? (You can undo.)', opened: 'Tree loaded from file.', openFailed: 'Could not open this file: {{error}}',
+    language: 'Language', data: 'Data', download: 'Download tree (JSON)', open: 'Open JSON file', reset: 'Reset to Bayrab seed', loadDemo: 'Load demo family (fictional)',
+    resetConfirm: 'Replace the current tree? (You can undo.)', opened: 'Tree loaded from file.', openFailed: 'Could not open this file: {{error}}',
     feedback: 'Give feedback', feedbackBody: 'Tried something? Download your tree and send it with your comments.',
     install: 'Install app', iosInstall: 'On iPhone: tap Share, then "Add to Home Screen".', offline: 'Offline — showing saved data',
     update: 'A new version is available.', updateNow: 'Update now',
@@ -65,7 +65,7 @@ type Resources = typeof en
 
 const ar: Resources = {
   appName: 'أنساب آل بيرب',
-  prototypeBanner: 'نموذج تجريبي — بيانات وهمية محفوظة في هذا المتصفح فقط',
+  prototypeBanner: 'نموذج تجريبي — تُحفظ تعديلاتك في هذا المتصفح فقط',
   nav: { editor: 'المحرر', lineage: 'النسب', tree: 'الشجرة', search: 'بحث', sources: 'المصادر', settings: 'الإعدادات' },
   actions: {
     add: 'إضافة', save: 'حفظ', cancel: 'إلغاء', confirm: 'تأكيد', delete: 'حذف', close: 'إغلاق', undo: 'تراجع', redo: 'إعادة',
@@ -87,7 +87,7 @@ const ar: Resources = {
   person: {
     title: 'شخص', ismAr: 'الاسم (عربي)', ismEn: 'الاسم (إنجليزي)', laqabAr: 'اللقب (عربي)', laqabEn: 'اللقب (إنجليزي)',
     gender: 'الجنس', birth: 'الميلاد', death: 'الوفاة', living: 'على قيد الحياة', notes: 'ملاحظات', id: 'الرقم',
-    parents: 'الوالدان', marriages: 'الزيجات', childrenWith: 'الأبناء من {{name}}', noChildren: 'لا أبناء مسجلون',
+    parents: 'الوالدان', marriages: 'الزيجات', childrenWith: 'الأبناء من {{name}}', noChildren: 'لا أبناء مسجلون', noMarriages: 'لا زيجات مسجلة',
     nasab: 'النسب (من جهة الأب)', maternal: 'خط الأم', claims: 'ادعاءات النسب', preferred: 'معتمد', alternative: 'بديل',
     unknownParents: 'الوالدان غير مسجلين', guardian: 'كافل', milkMother: 'أم من الرضاعة', milkFather: 'أب من الرضاعة', kinship: 'علاقات أخرى',
     sources: 'المصادر', setAsMe: 'هذا أنا', isMe: 'أنت',
@@ -114,8 +114,8 @@ const ar: Resources = {
   search: { placeholder: 'ابحث بالاسم (عربي أو إنجليزي) أو الرقم', none: 'لا نتائج' },
   lineage: { title: 'نسبي', pick: 'اختر الشخص لعرض نسبه', wives: 'الزوجات', showTree: 'عرض كشجرة' },
   settings: {
-    language: 'اللغة', data: 'البيانات', download: 'تنزيل الشجرة (JSON)', open: 'فتح ملف JSON', reset: 'إعادة البيانات التجريبية',
-    resetConfirm: 'استبدال الشجرة الحالية بالعائلة التجريبية؟ (يمكن التراجع)', opened: 'تم تحميل الشجرة من الملف.', openFailed: 'تعذر فتح الملف: {{error}}',
+    language: 'اللغة', data: 'البيانات', download: 'تنزيل الشجرة (JSON)', open: 'فتح ملف JSON', reset: 'إعادة بيانات بيرب الأولية', loadDemo: 'تحميل عائلة تجريبية (وهمية)',
+    resetConfirm: 'استبدال الشجرة الحالية؟ (يمكن التراجع)', opened: 'تم تحميل الشجرة من الملف.', openFailed: 'تعذر فتح الملف: {{error}}',
     feedback: 'أرسل ملاحظاتك', feedbackBody: 'جربت شيئًا؟ نزّل شجرتك وأرسلها مع ملاحظاتك.',
     install: 'تثبيت التطبيق', iosInstall: 'على الآيفون: اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».', offline: 'غير متصل — تُعرض البيانات المحفوظة',
     update: 'يتوفر إصدار جديد.', updateNow: 'حدّث الآن',

@@ -1,10 +1,11 @@
 import type { TreeData } from './model'
 import { createSampleFamily } from './sampleFamily'
+import { createBayrabSeed } from './seed'
 
 // Phase 0 data source: the whole tree lives in memory, mirrored to localStorage, with undo/redo.
 // Phase 3+ adds ApiStore behind the same React hooks (see plan.md, "DataSource").
 
-const STORAGE_KEY = 'bayrab-prototype-v1'
+const STORAGE_KEY = 'bayrab-prototype-v2'
 const HISTORY_LIMIT = 100
 
 interface HistoryEntry {
@@ -30,7 +31,7 @@ export class LocalStore {
   private snapshot: StoreSnapshot
 
   constructor() {
-    this.data = this.read() ?? createSampleFamily()
+    this.data = this.read() ?? initialData()
     this.snapshot = this.makeSnapshot()
   }
 
@@ -99,4 +100,9 @@ export class LocalStore {
       return null
     }
   }
+}
+
+/** Bayrab seed by default; `?seed=demo` in the URL starts with the fictional demo family (used by tests and demos). */
+function initialData(): TreeData {
+  return new URLSearchParams(location.search).get('seed') === 'demo' ? createSampleFamily() : createBayrabSeed()
 }

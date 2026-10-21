@@ -39,7 +39,7 @@ test.beforeEach(async ({ page }) => {
       sessionStorage.setItem('init', '1')
     }
   })
-  await page.goto('/#/editor')
+  await page.goto('/?seed=demo#/editor')
   await expect(node(page, 'Hamid')).toBeVisible()
 })
 

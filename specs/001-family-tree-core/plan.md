@@ -54,7 +54,7 @@ No open NEEDS CLARIFICATION items. Decisions: [research.md](research.md) R1–R3
 | III. Test-first; every endpoint integration-tested | | PASS — one integration test class per feature area; unit tests for every rule code; Phase 0 rule ports have Vitest tests |
 | IV. Visual, forgiving editing | Gestures = commands; drops explained; undo | PASS — Phase 0 builds exactly this experience first |
 | V. One API, one installable web client | Generated types; PWA installable; offline last tree | PASS — vite-plugin-pwa (R29); OpenAPI → `web/src/api` (R12) |
-| VI. Privacy & roles | Redaction everywhere; audit | PASS — Redactor in Phase 2 before anonymous access. **Phase 0 holds fictional data only** |
+| VI. Privacy & roles | Redaction everywhere; audit | PASS — Redactor in Phase 2 before anonymous access. **Phase 0 holds historical (deceased) people and fictional demo data only** |
 | VII. Simplicity | One DB, one backend project, one client | PASS — single `Bayrab.Api` project, single `web/` app, no shared npm package |
 | VIII. Evidence before assumption | Status + confidence on every relationship; Verified needs source | PASS — data model + `EvidencePolicy`; Phase 0 shows statuses, legend and the Verified-needs-source rule |
 | IX. Stable identity & portability | Permanent IDs; lossless exports; preview imports | PASS — `public_id`; import_batch; Phase 0 JSON file uses the same ids |
@@ -160,4 +160,4 @@ rewriting the UI.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| Phase 0 runs rules only in the browser (Principle II) and has no auth/redaction (Principle VI) | Get visual feedback on the editing and viewing experience in days, deployable as a static site | Building the backend first delays feedback on the UI, the riskiest part. Mitigation: fictional data only, a "Prototype — sample data" banner, no real family records; Phase 0 ends before any real data is entered |
+| Phase 0 runs rules only in the browser (Principle II) and has no auth/redaction (Principle VI) | Get visual feedback on the editing and viewing experience in days, deployable as a static site | Building the backend first delays feedback on the UI, the riskiest part. Mitigation: the public prototype holds only historical (deceased) people from the Bayrab seed (`web/src/data/seed/bayrab-records.json`) plus a fictional demo family; no details of living people until the backend with login and redaction exists |

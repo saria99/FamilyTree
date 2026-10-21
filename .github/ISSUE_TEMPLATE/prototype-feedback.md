@@ -14,4 +14,4 @@ labels: feedback
 **What I expected instead**
 
 **My tree file** — in the app open Settings → "Download tree (JSON)" and drag the file here.
-Please use only the fictional sample data; do not upload real family information.
+The site is public: do not include details of living people (names of the deceased and historical records are fine).

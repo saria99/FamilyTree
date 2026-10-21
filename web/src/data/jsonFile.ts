@@ -15,6 +15,7 @@ const schema = z.object({
     nameAr: z.string(),
     nameEn: z.string(),
     idPrefix: z.string(),
+    idDigits: z.number().optional(),
     nextPersonNumber: z.number(),
     iddahDivorceDays: z.number(),
     iddahWidowDays: z.number(),

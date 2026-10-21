@@ -10,7 +10,7 @@ export function BranchPicker({ value, onChange }: { value: string; onChange: (id
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{t('editor.allBranches')}</option>
         {data.branches.map((b) => (
-          <option key={b.id} value={b.id}>{lang === 'ar' ? b.nameAr ?? b.nameEn : b.nameEn ?? b.nameAr}</option>
+          <option key={b.id} value={b.id}>{lang === 'ar' ? b.nameAr || b.nameEn : b.nameEn || b.nameAr}</option>
         ))}
       </select>
     </label>

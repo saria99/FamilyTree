@@ -120,6 +120,8 @@ export interface TreeSettings {
   nameAr: string
   nameEn: string
   idPrefix: string
+  /** Zero-padding of person numbers: 4 → P-0001, 6 (default) → DEMO-000001. */
+  idDigits?: number
   nextPersonNumber: number
   iddahDivorceDays: number
   iddahWidowDays: number

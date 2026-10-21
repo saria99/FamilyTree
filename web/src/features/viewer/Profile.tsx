@@ -46,10 +46,10 @@ export function ProfilePage() {
         <div className={`avatar gender-${person.gender}`} aria-hidden>{personName(person, lang).slice(0, 1)}</div>
         <div>
           <h1>{personName(person, lang)} {person.laqabAr || person.laqabEn ? <small className="muted">({lang === 'ar' ? person.laqabAr ?? person.laqabEn : person.laqabEn ?? person.laqabAr})</small> : null}</h1>
-          <div className="muted" dir="auto">{lang === 'ar' ? person.ismEn : person.ismAr}</div>
+          {person.ismAr && person.ismEn && <div className="muted" dir="auto">{lang === 'ar' ? person.ismEn : person.ismAr}</div>}
           <div className="pill">{person.publicId}</div>
           {branches.map((b) => (
-            <span key={b.id} className="pill" style={{ borderColor: b.color, color: b.color }}>{lang === 'ar' ? b.nameAr : b.nameEn}</span>
+            <span key={b.id} className="pill" style={{ borderColor: b.color, color: b.color }}>{(lang === 'ar' ? b.nameAr || b.nameEn : b.nameEn || b.nameAr) ?? ''}</span>
           ))}
         </div>
         <button className={`btn ${meId === person.id ? 'btn-primary' : ''}`} onClick={() => setMe(person.id)}>
@@ -61,7 +61,8 @@ export function ProfilePage() {
         {fact(t('person.birth'), person.birth)}
         {fact(t('person.death'), person.death)}
       </dl>
-      {person.notes && <p>{person.notes}</p>}
+      {person.notes && <p dir="auto">{person.notes}</p>}
+      <Citations target={{ kind: 'person', id: person.id, fact: 'General' }} readOnly />
 
       <section>
         <h2>{t('person.nasab')}</h2>
@@ -98,6 +99,7 @@ export function ProfilePage() {
 
       <section>
         <h2>{t('person.marriages')}</h2>
+        {g.marriagesOf(person.id).length === 0 && <p className="muted">{t('person.noMarriages')}</p>}
         {g.marriagesOf(person.id).map((m) => {
           const spouse = g.person(person.gender === 'M' ? m.wifeId : m.husbandId)
           const children = g.childrenOf(m.id)

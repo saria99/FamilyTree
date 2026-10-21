@@ -25,7 +25,7 @@ export function addPerson(data: TreeData, input: NewPerson): CommandResult {
   const number = data.tree.nextPersonNumber
   const person: Person = {
     id: newId('p'),
-    publicId: `${data.tree.idPrefix}-${String(number).padStart(6, '0')}`,
+    publicId: `${data.tree.idPrefix}-${String(number).padStart(data.tree.idDigits ?? 6, '0')}`,
     gender: input.gender,
     ismAr: input.ismAr?.trim() || undefined,
     ismEn: input.ismEn?.trim() || undefined,

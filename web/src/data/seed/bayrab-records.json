@@ -1,0 +1,37 @@
+{
+  "tree": {
+    "nameEn": "Bayrab",
+    "nameAr": "",
+    "idPrefix": "P",
+    "idDigits": 4
+  },
+  "sources": [
+    {
+      "sourceId": "SRC-CHAT-001",
+      "type": "Other",
+      "title": "Chat report SRC-CHAT-001",
+      "notes": "Details of this source were not provided yet."
+    }
+  ],
+  "branches": [
+    {
+      "name": "Bayrab founding lineage",
+      "rootPersonId": "P-0001",
+      "color": "#1f5c50"
+    }
+  ],
+  "persons": [
+    {
+      "personId": "P-0001",
+      "primaryName": "Sharaf al-Din Wad Arki",
+      "gender": "M",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [],
+      "branch": "Bayrab founding lineage",
+      "status": "reported",
+      "sourceIds": ["SRC-CHAT-001"],
+      "notes": "Described as founder of Bayrab village; parents and spouse(s) not provided."
+    }
+  ]
+}
