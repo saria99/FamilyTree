@@ -2,7 +2,7 @@
 
 **Revised**: 2026-10-17 (added claims, verification, iddah-of-fifth-wife, child-before-parent, source codes).
 
-Shared by API, web, and mobile (`packages/shared/src/rules/messages.ts`). The API returns `code`,
+Shared by the API (`Domain/Rules/RuleMessages.cs`) and the React PWA (`web/src/domain/messages.ts`). The API returns `code`,
 `severity`, `personIds`, `relation`, and a bilingual `message`. Clients may override display text from this
 table but MUST NOT change severity.
 
