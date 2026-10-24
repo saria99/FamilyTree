@@ -149,6 +149,15 @@ fieldset.date-input legend { font-size: .85rem; color: var(--muted); padding: 0 
 .person-node:hover .react-flow__handle.diamond-handle, .person-node.is-selected .react-flow__handle.diamond-handle, .react-flow__handle.diamond-handle.connectingfrom { opacity: 1; }
 .react-flow__handle.diamond-handle:hover { background: var(--accent); box-shadow: 0 0 0 4px rgb(31 92 80 / 25%); }
 .react-flow__handle.diamond-handle.is-hidden { display: none; }
+.add-relative { position: absolute; display: inline-flex; align-items: center; gap: .2rem; white-space: nowrap; font-size: .68rem; font-weight: 600; line-height: 1; padding: .2rem .45rem; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 2; box-shadow: var(--shadow); }
+.add-relative span { display: none; }
+.add-relative:hover, .add-relative:focus-visible { background: var(--accent); color: var(--accent-text); }
+.add-relative:hover span, .add-relative:focus-visible span { display: inline; }
+.person-node:hover .add-relative, .person-node.is-selected .add-relative, .add-relative:focus-visible { opacity: 1; pointer-events: auto; }
+.add-top { left: 50%; top: -26px; transform: translateX(-50%); }
+.add-bottom { left: 50%; bottom: -26px; transform: translateX(-50%); }
+.add-start { top: 50%; inset-inline-end: calc(100% + 6px); transform: translateY(-50%); }
+.add-end { top: 50%; inset-inline-start: calc(100% + 6px); transform: translateY(-50%); }
 .union-node { border-radius: 50%; border: 2.5px solid var(--status-unconfirmed); background: var(--surface); display: grid; place-items: center; font-size: .8rem; position: relative; cursor: pointer; }
 .union-node.status-Verified { border-color: var(--status-verified); }
 .union-node.status-OralAccount { border-color: var(--status-oral); border-style: dashed; }

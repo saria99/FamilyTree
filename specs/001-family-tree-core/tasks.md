@@ -96,6 +96,8 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 - [x] T124 [US3] Drag from a connector to a person to create parent / sibling / child links (marriage picker, "other parent unknown") in `web/src/features/editor/FamilyCanvas.tsx` and `web/src/data/commands.ts`
 - [x] T125 [US3] Free arrangement (positions kept in the tree data, rings follow spouses, Auto-arrange) and re-shifting (Move here / Add as alternative) with Playwright coverage in `web/tests/desktop.spec.ts`
 
+- [x] T126 [US3] "+" actions at the diamond points (Add parent / sibling / child) with a short form, one-step create + link (`addRelative`), new person opened in the side panel; parent fills the unknown slot — `web/src/features/editor/AddRelativeDialog.tsx`, Playwright coverage
+
 **Checkpoint (STOP)**: Collect feedback. Update spec.md/plan.md with what changed before starting Phase 1.
 
 ---

@@ -17,12 +17,13 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useLang } from '../../app/i18n'
 import { useGraph, useStoreApi, useTreeData } from '../../app/store'
-import { addClaim, ensurePlaceholder, moveClaim, setPosition, siblingNeedsParent, siblingTarget, type CommandResult } from '../../data/commands'
+import { addClaim, ensurePlaceholder, type RelativeKind, moveClaim, setPosition, siblingNeedsParent, siblingTarget, type CommandResult } from '../../data/commands'
 import type { TreeData } from '../../data/model'
 import { checkMarriage, checkParentage, violations, type RuleOutcome } from '../../domain/rules'
 import { personName } from '../../domain/text'
 import { StatusLegend } from '../../shared/status'
 import { computeLayout, marriageIdOf, PERSON_H, PERSON_W, UNION_SIZE, type Layout } from '../layout/layout'
+import { AddRelativeDialog } from './AddRelativeDialog'
 import { ChoiceDialog, MarriageDialog, type Choice } from './forms'
 import { edgeTypes, HANDLE, nodeTypes, type DropVerdict, type StatusFlowEdge } from './nodes'
 import type { Selection } from './SidePanel'
@@ -69,6 +70,7 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
   const [drop, setDrop] = useState<DropTarget | null>(null)
   const [marriageDraft, setMarriageDraft] = useState<{ husbandId: string; wifeId: string } | null>(null)
   const [choice, setChoice] = useState<ChoiceRequest | null>(null)
+  const [adding, setAdding] = useState<{ anchorId: string; kind: RelativeKind } | null>(null)
   const connecting = useRef<{ nodeId: string; handleId: string } | null>(null)
   const fitted = useRef(false)
 
@@ -89,7 +91,18 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
     }
   }, [g, visible, lang])
 
-  const labels = useMemo(() => ({ parents: t('editor.handleParents'), sibling: t('editor.handleSibling'), children: t('editor.handleChildren') }), [t])
+  const labels = useMemo(
+    () => ({
+      parents: t('editor.handleParents'),
+      sibling: t('editor.handleSibling'),
+      children: t('editor.handleChildren'),
+      addParent: t('addRelative.addParent'),
+      addSibling: t('addRelative.addSibling'),
+      addChild: t('addRelative.addChild'),
+    }),
+    [t],
+  )
+  const onAdd = useCallback((anchorId: string, kind: RelativeKind) => setAdding({ anchorId, kind }), [])
 
   const baseNodes = useMemo<Node[]>(() => {
     if (!layout) return []
@@ -105,7 +118,7 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
           position: personPos.get(n.id)!,
           draggable: editable,
           selected: selection?.kind === 'person' && selection.id === n.id,
-          data: { person: g.person(n.id)!, lang, verdict: null, isMe: n.id === meId, dimmed: false, editable, labels },
+          data: { person: g.person(n.id)!, lang, verdict: null, isMe: n.id === meId, dimmed: false, editable, labels, onAdd },
         }
       }
       const marriage = g.marriages.get(marriageIdOf(n.id)!)!
@@ -120,7 +133,7 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
         data: { marriage, verdict: null, dimmed: false },
       }
     })
-  }, [layout, g, data.positions, lang, editable, selection, meId, labels])
+  }, [layout, g, data.positions, lang, editable, selection, meId, labels, onAdd])
 
   useEffect(() => setNodes(baseNodes), [baseNodes, setNodes])
 
@@ -379,6 +392,15 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
           onClose={(id) => {
             setMarriageDraft(null)
             if (id) onSelect?.({ kind: 'marriage', id })
+          }}
+        />
+      )}
+      {adding && (
+        <AddRelativeDialog
+          {...adding}
+          onClose={(id) => {
+            setAdding(null)
+            if (id) onSelect?.({ kind: 'person', id })
           }}
         />
       )}

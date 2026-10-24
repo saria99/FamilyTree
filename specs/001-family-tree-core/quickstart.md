@@ -72,6 +72,8 @@ serves the PWA on one origin). Install it to the home screen; open a tree once, 
 7. Drag from **Ali's side** connector to a new person "Zaynab" → Zaynab becomes Ali's sibling (same parents).
 8. Drag from a new person's **top** connector to Sawdah → choose "with Abdullah" → child of Abdullah and Sawdah.
    Drag Ali to an empty spot → he stays there; **Auto-arrange** restores the layout.
+   Hover Ali: click **+ Add child** under his diamond → choose Son, type a name and birth year → Add → the son appears
+   and opens in the side panel to fill in the rest.
 9. Quick entry: `Ali ibn Abdullah ibn Hashim` → choose existing "Abdullah", new "Ali" and "Hashim" → chain created.
 10. Press Ctrl+Z three times → last three actions undone; Ctrl+Y redoes.
 11. Settings → Visibility: Public. Open the tree in a private browser window → living people show "Living person".

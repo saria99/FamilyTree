@@ -210,3 +210,60 @@ export function setPosition(data: TreeData, personId: string, position: { x: num
 export function clearPositions(data: TreeData): CommandResult {
   return { ok: true, data: { ...data, positions: undefined } }
 }
+
+export type RelativeKind = 'parent' | 'sibling' | 'child'
+
+export interface NewRelative extends NewPerson {
+  birth?: Person['birth']
+  death?: Person['death']
+  /** For a child: one of the anchor's marriages, or undefined for "other parent unknown". */
+  marriageId?: string
+}
+
+/**
+ * "+" on a diamond point: create a person and link them to `anchorId` in one undo step.
+ * - parent: fills the empty slot of the anchor's parent marriage, or starts a "other parent unknown" marriage;
+ * - sibling: same preferred parents as the anchor;
+ * - child: child of the chosen marriage of the anchor (or the anchor's "other parent unknown" marriage).
+ */
+export function addRelative(data: TreeData, anchorId: string, kind: RelativeKind, input: NewRelative): CommandResult {
+  const anchor = data.persons.find((p) => p.id === anchorId)
+  if (!anchor) return { ok: true, data }
+  const anchorClaim = data.claims.find((c) => c.childId === anchorId && c.preferred)
+  if (kind === 'sibling' && !anchorClaim) return blocked('SIBLING_NEEDS_PARENT', [anchorId])
+
+  const created = addPerson(data, input)
+  if (!created.ok) return created
+  const personId = created.createdId!
+  let next: TreeData = {
+    ...created.data,
+    persons: created.data.persons.map((p) => (p.id === personId ? { ...p, birth: input.birth, death: input.death, isLiving: !input.death?.y } : p)),
+  }
+  const link = (childId: string, marriageId: string) => addClaim(next, { childId, marriageId, preferred: true, status: 'Unconfirmed', confidence: 'Low' }, [])
+
+  let result: CommandResult
+  if (kind === 'sibling') {
+    result = link(personId, anchorClaim!.marriageId)
+  } else if (kind === 'child') {
+    const marriageId = input.marriageId ?? (() => {
+      const r = ensurePlaceholder(next, anchorId, anchor.gender)
+      next = r.data
+      return r.marriageId
+    })()
+    result = link(personId, marriageId)
+  } else {
+    const slot = input.gender === 'M' ? 'husbandId' : 'wifeId'
+    const current = anchorClaim ? next.marriages.find((m) => m.id === anchorClaim.marriageId) : undefined
+    if (current && current[slot] === null) {
+      // The anchor's other parent was unknown: the new parent completes the marriage.
+      result = { ok: true, data: { ...next, marriages: next.marriages.map((m) => (m.id === current.id ? { ...m, [slot]: personId } : m)) } }
+    } else if (current) {
+      return blocked('CHILD_HAS_PARENTS', [anchorId])
+    } else {
+      const r = ensurePlaceholder(next, personId, input.gender)
+      next = r.data
+      result = link(anchorId, r.marriageId)
+    }
+  }
+  return result.ok ? { ok: true, data: result.data, createdId: personId } : result
+}

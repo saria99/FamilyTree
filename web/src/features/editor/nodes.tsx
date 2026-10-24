@@ -15,7 +15,9 @@ export type PersonNodeData = {
   isMe: boolean
   dimmed: boolean
   editable: boolean
-  labels: { parents: string; sibling: string; children: string }
+  labels: { parents: string; sibling: string; children: string; addParent: string; addSibling: string; addChild: string }
+  /** "+" on a point: add a new parent / sibling / child. */
+  onAdd?: (personId: string, kind: 'parent' | 'sibling' | 'child') => void
 }
 export type UnionNodeData = { marriage: Marriage; verdict: DropVerdict; dimmed: boolean }
 export type PersonFlowNode = Node<PersonNodeData, 'person'>
@@ -31,7 +33,7 @@ export const HANDLE = { parents: 'parents', siblingStart: 'sibling-start', sibli
  * bottom point to children. Existing lines arrive at the top (from the parents' ring) and leave from the bottom.
  */
 export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
-  const { person, lang, verdict, isMe, dimmed, editable, labels } = data
+  const { person, lang, verdict, isMe, dimmed, editable, labels, onAdd } = data
   const years = [yearOf(person.birth), yearOf(person.death)]
   const lifespan = years[0] || years[1] ? `${years[0] ?? '?'}${years[1] ? `–${years[1]}` : person.isLiving ? '' : '–?'}` : ''
   const other = person.ismAr && person.ismEn ? (lang === 'ar' ? person.ismEn : person.ismAr) : undefined
@@ -53,6 +55,14 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
       {connector(HANDLE.siblingStart, Position.Left, labels.sibling)}
       {connector(HANDLE.siblingEnd, Position.Right, labels.sibling)}
       {connector(HANDLE.children, Position.Bottom, labels.children)}
+      {editable && onAdd && (
+        <>
+          <AddButton side="top" label={labels.addParent} onClick={() => onAdd(person.id, 'parent')} />
+          <AddButton side="start" label={labels.addSibling} onClick={() => onAdd(person.id, 'sibling')} />
+          <AddButton side="end" label={labels.addSibling} onClick={() => onAdd(person.id, 'sibling')} />
+          <AddButton side="bottom" label={labels.addChild} onClick={() => onAdd(person.id, 'child')} />
+        </>
+      )}
       <div className="diamond-body">
         <div className="person-name">
           {personName(person, lang)}
@@ -65,6 +75,24 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
     </div>
   )
 })
+
+/** A small "+ Add …" pill just outside a diamond point; `nodrag` keeps a click from starting a node drag. */
+function AddButton({ side, label, onClick }: { side: 'top' | 'bottom' | 'start' | 'end'; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`add-relative nodrag nopan add-${side}`}
+      title={label}
+      aria-label={label}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+    >
+      + <span>{label}</span>
+    </button>
+  )
+}
 
 const END_GLYPH: Record<Marriage['endReason'], string> = {
   Ongoing: '●', Divorce: '×', Khul: '×', Annulment: '⊘', DeathOfHusband: '◌', DeathOfWife: '◌', Unknown: '·',

@@ -117,6 +117,11 @@ two grandchildren) using only the canvas, with no forms outside it. Confirm the 
     alternative claim**.
 11. **Given** any person, **When** the admin drags them to an empty spot, **Then** they stay where dropped (the marriage
     ring follows its spouses), and **Auto-arrange** restores the automatic layout.
+12. **Given** the admin hovers (or selects) a diamond, **When** they click the "+" beside a point (top = **Add parent**,
+    sides = **Add sibling**, bottom = **Add child**), **Then** a short form asks for the essentials (father/mother,
+    brother/sister or son/daughter; names; birth and death year; for a child, which marriage), creates the person and the
+    relationship in one undoable step, and opens the new person in the side panel where all other properties can be
+    filled in later. A second parent added this way completes the "other parent unknown" marriage.
 5. **Given** any change, **When** the admin presses Undo, **Then** the last change is reversed.
 6. **Given** quick entry "Fatimah bint Muhammad ibn Abdullah", **When** submitted, **Then** the system creates or
    matches Fatimah, Muhammad and Abdullah and links them father-to-child (asking which existing person to use if a
@@ -327,6 +332,9 @@ two updates and one creation; after commit the tree reflects them and history at
 - **FR-046**: Each person MUST be drawn as a diamond with connectors: top = parents, left/right = siblings, bottom =
   children. Dragging from a connector to another person MUST create that relationship (asking which marriage when the
   parent has several, with "other parent unknown" as an option).
+- **FR-048**: Hovering or selecting a diamond MUST show "+" actions at its points (Add parent / Add sibling / Add child)
+  that open a short form for the essentials and create the person and relationship in one step; the new person's
+  remaining properties MUST be editable afterwards.
 - **FR-047**: Admins MUST be able to drag people freely to arrange the tree (positions are kept), restore the automatic
   layout, and move a child's relationship to other parents by dragging (Move here / Add as alternative claim).
 - **FR-017**: Admins MUST be able to undo and redo their changes within a session.
@@ -475,6 +483,8 @@ two updates and one creation; after commit the tree reflects them and history at
   parentage, husband + wife.
 - Q: Person shape and editing? → A: Diamond with connectors (top = parents, sides = siblings, bottom = children);
   drag and drop to arrange people and to move relationships.
+- Q: Adding relatives from a point? → A: Hovering a point shows "+ Add …"; clicking asks for the essentials; the rest is
+  edited later in the side panel.
 
 ## Assumptions
 

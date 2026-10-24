@@ -144,3 +144,56 @@ test('a person dropped on empty space stays there; Auto-arrange restores the lay
   await page.getByRole('button', { name: /Auto-arrange/ }).click()
   await expect.poll(async () => (await stored(page)).positions).toBeUndefined()
 })
+
+/** Hover a person and click one of the "+" buttons around the diamond. */
+async function plus(page: Page, name: string, label: 'Add parent' | 'Add sibling' | 'Add child') {
+  await fit(page)
+  await node(page, name).hover()
+  await node(page, name).getByRole('button', { name: label }).first().click()
+}
+
+test('"+ Add child" asks for the essentials, creates the child under the chosen marriage, and opens it for editing', async ({ page }) => {
+  await plus(page, 'Khadijah', 'Add child')
+  const dialog = page.getByRole('dialog', { name: 'Add a child of Khadijah' })
+  await dialog.getByRole('radio', { name: 'Daughter' }).click()
+  await dialog.getByLabel('Name (English)').fill('Maymunah')
+  await dialog.getByLabel('Birth year').fill('1962')
+  await page.screenshot({ path: 'test-results/desktop-add-child.png' })
+  await dialog.getByRole('button', { name: 'Add' }).click()
+  const data = await stored(page)
+  const child = data.persons.find((p) => p.ismEn === 'Maymunah')!
+  expect(child).toBeTruthy()
+  expect(data.claims.find((c) => c.childId === child.id)).toMatchObject({ marriageId: 'm3', preferred: true })
+  // The new person is selected so the rest can be filled in later.
+  await expect(page.locator('.side-panel')).toContainText('Maymunah')
+})
+
+test('"+ Add parent" twice: the second parent completes the marriage', async ({ page }) => {
+  await plus(page, 'Nuh', 'Add parent')
+  let dialog = page.getByRole('dialog', { name: 'Add a parent of Nuh' })
+  await dialog.getByRole('radio', { name: 'Father' }).click()
+  await dialog.getByLabel('Name (English)').fill('Nuh Father')
+  await dialog.getByRole('button', { name: 'Add' }).click()
+
+  await plus(page, 'Nuh', 'Add parent')
+  dialog = page.getByRole('dialog', { name: 'Add a parent of Nuh' })
+  await expect(dialog.getByRole('radio', { name: 'Mother' })).toHaveAttribute('aria-checked', 'true')
+  await dialog.getByLabel('Name (English)').fill('Nuh Mother')
+  await dialog.getByRole('button', { name: 'Add' }).click()
+
+  const data = await page.evaluate(() => JSON.parse(localStorage.getItem('bayrab-prototype-v2')!))
+  const id = (n: string) => data.persons.find((p: { ismEn?: string }) => p.ismEn === n).id
+  const claim = data.claims.find((c: { childId: string }) => c.childId === 'p19')
+  const marriage = data.marriages.find((m: { id: string }) => m.id === claim.marriageId)
+  expect([marriage.husbandId, marriage.wifeId]).toEqual([id('Nuh Father'), id('Nuh Mother')])
+})
+
+test('"+ Add sibling" gives the new person the same parents', async ({ page }) => {
+  await plus(page, 'Yusuf', 'Add sibling')
+  const dialog = page.getByRole('dialog', { name: 'Add a sibling of Yusuf' })
+  await dialog.getByLabel('Name (English)').fill('Yahya')
+  await dialog.getByRole('button', { name: 'Add' }).click()
+  const data = await stored(page)
+  const sib = data.persons.find((p) => p.ismEn === 'Yahya')!
+  expect(data.claims.find((c) => c.childId === sib.id)?.marriageId).toBe('m2')
+})

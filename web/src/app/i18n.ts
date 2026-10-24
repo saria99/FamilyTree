@@ -42,6 +42,13 @@ const en = {
     divorceKinds: { Revocable: "Revocable (raj'i)", IrrevocableMinor: "Irrevocable minor (ba'in sughra)", IrrevocableMajor: "Irrevocable major (ba'in kubra)" },
   },
   date: { year: 'Year', month: 'Month', day: 'Day', approx: 'approx.' },
+  addRelative: {
+    addParent: 'Add parent', addSibling: 'Add sibling', addChild: 'Add child',
+    title: { parent: 'Add a parent of {{name}}', sibling: 'Add a sibling of {{name}}', child: 'Add a child of {{name}}' },
+    father: 'Father', mother: 'Mother', brother: 'Brother', sister: 'Sister', son: 'Son', daughter: 'Daughter',
+    birthYear: 'Birth year', deathYear: 'Death year',
+    later: 'You can fill in the rest (laqab, exact dates, notes, sources) later from the side panel.',
+  },
   verification: {
     status: 'Status', confidence: 'Confidence',
     statuses: { Verified: 'Verified', OralAccount: 'Oral account', Disputed: 'Disputed', Unconfirmed: 'Not verified (default)' },
@@ -107,6 +114,13 @@ const ar: Resources = {
     divorceKinds: { Revocable: 'رجعي', IrrevocableMinor: 'بائن بينونة صغرى', IrrevocableMajor: 'بائن بينونة كبرى' },
   },
   date: { year: 'السنة', month: 'الشهر', day: 'اليوم', approx: 'تقريبي' },
+  addRelative: {
+    addParent: 'إضافة والد', addSibling: 'إضافة أخ', addChild: 'إضافة ابن',
+    title: { parent: 'إضافة أحد والدي {{name}}', sibling: 'إضافة أخ أو أخت لـ{{name}}', child: 'إضافة ابن أو ابنة لـ{{name}}' },
+    father: 'الأب', mother: 'الأم', brother: 'أخ', sister: 'أخت', son: 'ابن', daughter: 'ابنة',
+    birthYear: 'سنة الميلاد', deathYear: 'سنة الوفاة',
+    later: 'يمكنك إكمال باقي البيانات (اللقب، التواريخ الدقيقة، الملاحظات، المصادر) لاحقًا من اللوحة الجانبية.',
+  },
   verification: {
     status: 'الحالة', confidence: 'الثقة',
     statuses: { Verified: 'موثق', OralAccount: 'رواية شفهية', Disputed: 'متنازع عليه', Unconfirmed: 'غير موثق (افتراضي)' },
