@@ -130,15 +130,25 @@ fieldset.date-input legend { font-size: .85rem; color: var(--muted); padding: 0 
 .legend-row { display: flex; align-items: center; gap: .4rem; }
 .react-flow { --xy-background-color: var(--bg); --xy-controls-button-background-color: var(--surface); --xy-controls-button-color: var(--text); --xy-minimap-background-color: var(--surface); }
 
-.person-node { border: 1.5px solid; border-radius: 10px; padding: .3rem .5rem; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--shadow); cursor: grab; transition: box-shadow .15s, outline-color .15s; overflow: hidden; }
-.person-node.gender-M { background: var(--male); border-color: var(--male-border); }
-.person-node.gender-F { background: var(--female); border-color: var(--female-border); }
-.person-node.is-selected { outline: 3px solid var(--accent); outline-offset: 1px; }
-.person-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.person-alt { font-size: .75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.person-meta { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); }
-.person-id { font-family: ui-monospace, monospace; }
-.me-dot { color: var(--accent); margin-inline-start: .3rem; font-size: .7rem; }
+.person-node { position: relative; cursor: grab; }
+.person-node .diamond-shape { position: absolute; inset: 0; overflow: visible; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 12%)); }
+.person-node .diamond-shape polygon { stroke-width: 1.5; transition: stroke .15s, stroke-width .15s; }
+.person-node.gender-M .diamond-shape polygon { fill: var(--male); stroke: var(--male-border); }
+.person-node.gender-F .diamond-shape polygon { fill: var(--female); stroke: var(--female-border); }
+.person-node.is-selected .diamond-shape polygon { stroke: var(--accent); stroke-width: 3.5; }
+.person-node.drop-ok .diamond-shape polygon { stroke: var(--ok); stroke-width: 4; }
+.person-node.drop-warn .diamond-shape polygon { stroke: var(--warning); stroke-width: 4; }
+.person-node.drop-bad .diamond-shape polygon { stroke: var(--danger); stroke-width: 4; }
+.diamond-body { position: absolute; inset: 22% 18%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.15; pointer-events: none; }
+.person-name { font-weight: 600; font-size: .85rem; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-alt { font-size: .7rem; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-years { font-size: .68rem; color: var(--muted); }
+.person-id { font-family: ui-monospace, monospace; font-size: .62rem; color: var(--muted); }
+.me-dot { color: var(--accent); margin-inline-start: .3rem; font-size: .6rem; }
+.react-flow__handle.diamond-handle { width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); opacity: 0; transition: opacity .12s, transform .12s; }
+.person-node:hover .react-flow__handle.diamond-handle, .person-node.is-selected .react-flow__handle.diamond-handle, .react-flow__handle.diamond-handle.connectingfrom { opacity: 1; }
+.react-flow__handle.diamond-handle:hover { background: var(--accent); box-shadow: 0 0 0 4px rgb(31 92 80 / 25%); }
+.react-flow__handle.diamond-handle.is-hidden { display: none; }
 .union-node { border-radius: 50%; border: 2.5px solid var(--status-unconfirmed); background: var(--surface); display: grid; place-items: center; font-size: .8rem; position: relative; cursor: pointer; }
 .union-node.status-Verified { border-color: var(--status-verified); }
 .union-node.status-OralAccount { border-color: var(--status-oral); border-style: dashed; }
@@ -146,9 +156,9 @@ fieldset.date-input legend { font-size: .85rem; color: var(--muted); padding: 0 
 .union-node.is-placeholder { opacity: .7; }
 .union-node.is-selected { outline: 3px solid var(--accent); outline-offset: 2px; }
 .union-flag { position: absolute; top: -6px; inset-inline-end: -6px; background: var(--warning); color: #fff; border-radius: 50%; width: 14px; height: 14px; font-size: .6rem; display: grid; place-items: center; }
-.drop-ok { outline: 3px solid var(--ok) !important; outline-offset: 2px; }
-.drop-warn { outline: 3px solid var(--warning) !important; outline-offset: 2px; }
-.drop-bad { outline: 3px solid var(--danger) !important; outline-offset: 2px; }
+.union-node.drop-ok { outline: 3px solid var(--ok); outline-offset: 2px; }
+.union-node.drop-warn { outline: 3px solid var(--warning); outline-offset: 2px; }
+.union-node.drop-bad { outline: 3px solid var(--danger); outline-offset: 2px; }
 .is-dimmed { opacity: .25; }
 .edge-label { position: absolute; pointer-events: all; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0 .3rem; font-size: .7rem; }
 
@@ -165,6 +175,8 @@ fieldset.date-input legend { font-size: .85rem; color: var(--muted); padding: 0 
 .modal-danger { border-top-color: var(--danger); }
 .modal-warning { border-top-color: var(--warning); }
 .modal h2 { margin: 0; }
+.choice-list { display: flex; flex-direction: column; gap: .4rem; }
+.choice-list .btn { text-align: start; }
 .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .5rem; }
 .rule-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
 .rule-list li { display: grid; grid-template-columns: auto 1fr; gap: .1rem .5rem; }

@@ -139,4 +139,6 @@ export interface TreeData {
   sources: Source[]
   citations: Citation[]
   branches: Branch[]
+  /** Manually arranged person positions on the canvas (absent = automatic layout). */
+  positions?: Record<string, { x: number; y: number }>
 }

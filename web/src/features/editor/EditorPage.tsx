@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../../app/i18n'
 import { useStoreApi, useStoreSnapshot } from '../../app/store'
+import { clearPositions } from '../../data/commands'
 import { useIsPhone } from '../../app/useIsPhone'
 import { CommandBar } from './CommandBar'
 import { FamilyCanvas } from './FamilyCanvas'
@@ -13,8 +14,8 @@ export function EditorPage() {
   const { t } = useLang()
   const navigate = useNavigate()
   const isPhone = useIsPhone()
-  const { undo, redo } = useStoreApi()
-  const { canUndo, canRedo, undoLabel, redoLabel } = useStoreSnapshot()
+  const { undo, redo, run } = useStoreApi()
+  const { data, canUndo, canRedo, undoLabel, redoLabel } = useStoreSnapshot()
   const [selection, setSelection] = useState<Selection>(null)
   const [focusId, setFocusId] = useState<string>()
   const [branchId, setBranchId] = useState('')
@@ -50,6 +51,9 @@ export function EditorPage() {
         <div className="toolbar-group">
           <button className="btn" disabled={!canUndo} onClick={undo} title={undoLabel}>↶ {t('actions.undo')}</button>
           <button className="btn" disabled={!canRedo} onClick={redo} title={redoLabel}>↷ {t('actions.redo')}</button>
+          <button className="btn" disabled={!data.positions || Object.keys(data.positions).length === 0} onClick={() => run('Auto-arrange', () => clearPositions(data))}>
+            ⤧ {t('editor.autoArrange')}
+          </button>
           <BranchPicker value={branchId} onChange={setBranchId} />
         </div>
       </div>

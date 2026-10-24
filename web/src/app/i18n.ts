@@ -18,9 +18,13 @@ const en = {
     chainNote: 'Links are recorded as entered. You can add a status or a source later if you wish.',
   },
   editor: {
-    hint: 'Drag a person onto another person to record a marriage, or onto a marriage ring to add them as a child.',
+    hint: 'Drag a person onto another person to record a marriage, or onto a marriage ring to add them as a child. Hover a diamond and drag from its top point to a parent, a side point to a sibling, or the bottom point to a child. Drop a person on empty space to arrange the tree.',
     phoneOnly: 'Editing is available on a desktop screen.',
     filterBranch: 'Branch', allBranches: 'Whole tree', fit: 'Fit view',
+    handleParents: 'Drag to a parent', handleSibling: 'Drag to a sibling', handleChildren: 'Drag to a child',
+    pickMarriageTitle: 'Which marriage?', pickMarriageBody: 'Which of {{name}}’s marriages is this child from?', otherParentUnknown: 'Other parent unknown',
+    shiftTitle: 'Change parents?', shiftBody: '{{name}} already has parents ({{parents}}). Move the relationship here, or keep both as an alternative claim?', moveHere: 'Move here',
+    autoArrange: 'Auto-arrange', withSpouse: 'with {{name}}',
     alternativeBody: '{{name}} already has preferred parents. Record these parents as an alternative (disputed) claim? The tree keeps following the preferred parents until you choose otherwise.',
   },
   person: {
@@ -79,9 +83,13 @@ const ar: Resources = {
     chainNote: 'تُسجَّل الروابط كما أُدخلت. يمكنك إضافة حالة أو مصدر لاحقًا إن شئت.',
   },
   editor: {
-    hint: 'اسحب شخصًا إلى شخص آخر لتسجيل زواج، أو إلى حلقة الزواج لإضافته ابنًا.',
+    hint: 'اسحب شخصًا إلى شخص آخر لتسجيل زواج، أو إلى حلقة الزواج لإضافته ابنًا. مرّر المؤشر على المعيّن واسحب من رأسه العلوي إلى أحد الوالدين، أو من الجانب إلى أخ، أو من الأسفل إلى ابن. أفلت الشخص في مكان فارغ لترتيب الشجرة.',
     phoneOnly: 'التحرير متاح على شاشة الحاسوب.',
     filterBranch: 'الفرع', allBranches: 'الشجرة كاملة', fit: 'ملاءمة العرض',
+    handleParents: 'اسحب إلى أحد الوالدين', handleSibling: 'اسحب إلى أخ أو أخت', handleChildren: 'اسحب إلى ابن أو ابنة',
+    pickMarriageTitle: 'أي زواج؟', pickMarriageBody: 'من أي زيجات {{name}} هذا الابن؟', otherParentUnknown: 'الوالد الآخر غير معروف',
+    shiftTitle: 'تغيير الوالدين؟', shiftBody: 'لـ{{name}} والدان بالفعل ({{parents}}). هل تنقل العلاقة إلى هنا أم تحتفظ بالاثنين كادعاء بديل؟', moveHere: 'انقل إلى هنا',
+    autoArrange: 'ترتيب تلقائي', withSpouse: 'من {{name}}',
     alternativeBody: 'لـ{{name}} والدان معتمدان بالفعل. هل تسجل هذين الوالدين كادعاء بديل (متنازع عليه)؟ تبقى الشجرة على الوالدين المعتمدين حتى تختار غير ذلك.',
   },
   person: {

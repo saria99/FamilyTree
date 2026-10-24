@@ -2,8 +2,8 @@ import type { ELK as ElkApi, ElkNode } from 'elkjs/lib/elk-api'
 import type { Confidence, KinshipKind, VerificationStatus } from '../../data/model'
 import type { FamilyGraph } from '../../domain/graph'
 
-export const PERSON_W = 172
-export const PERSON_H = 66
+export const PERSON_W = 184
+export const PERSON_H = 112
 export const UNION_SIZE = 30
 
 export type LayoutNode =

@@ -164,3 +164,49 @@ export function addLineage(data: TreeData, chain: LineageChoice[], lang: 'ar' | 
   }
   return { ok: true, data: next, createdId: ids[0] }
 }
+
+/** The known parent's placeholder marriage (other parent unknown), created if missing — one per parent (U1). */
+export function ensurePlaceholder(data: TreeData, parentId: string, gender: Person['gender']): { data: TreeData; marriageId: string } {
+  const existing = data.marriages.find((m) => (gender === 'M' ? m.husbandId === parentId && m.wifeId === null : m.wifeId === parentId && m.husbandId === null))
+  if (existing) return { data, marriageId: existing.id }
+  const placeholder: Marriage = {
+    id: newId('m'),
+    husbandId: gender === 'M' ? parentId : null,
+    wifeId: gender === 'F' ? parentId : null,
+    endReason: 'Unknown',
+    status: 'Unconfirmed',
+    confidence: 'Low',
+    flags: [],
+  }
+  return { data: { ...data, marriages: [...data.marriages, placeholder] }, marriageId: placeholder.id }
+}
+
+/** Re-shift: the child's preferred parentage moves to another marriage (cycle / duplicate still refused). */
+export function moveClaim(data: TreeData, claimId: string, marriageId: string): CommandResult {
+  const claim = data.claims.find((c) => c.id === claimId)
+  if (!claim || claim.marriageId === marriageId) return { ok: true, data }
+  const without = { ...data, claims: data.claims.filter((c) => c.id !== claimId) }
+  const outcome = checkParentage(without, { childId: claim.childId, marriageId, preferred: false, status: claim.status })
+  if (isBlocked(outcome, [])) return { ok: false, outcome }
+  return { ok: true, createdId: claim.id, data: { ...data, claims: data.claims.map((c) => (c.id === claimId ? { ...c, marriageId } : c)) } }
+}
+
+/** Sibling link: the person without parents gets the other's preferred parents. */
+export function siblingTarget(data: TreeData, aId: string, bId: string): { childId: string; marriageId: string } | null {
+  const preferred = (id: string) => data.claims.find((c) => c.childId === id && c.preferred)
+  const a = preferred(aId)
+  const b = preferred(bId)
+  if (a) return { childId: bId, marriageId: a.marriageId }
+  if (b) return { childId: aId, marriageId: b.marriageId }
+  return null
+}
+
+export const siblingNeedsParent = (): CommandResult => blocked('SIBLING_NEEDS_PARENT')
+
+export function setPosition(data: TreeData, personId: string, position: { x: number; y: number }): CommandResult {
+  return { ok: true, data: { ...data, positions: { ...data.positions, [personId]: { x: Math.round(position.x), y: Math.round(position.y) } } } }
+}
+
+export function clearPositions(data: TreeData): CommandResult {
+  return { ok: true, data: { ...data, positions: undefined } }
+}

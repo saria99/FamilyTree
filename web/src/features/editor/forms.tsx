@@ -189,3 +189,32 @@ export function ConfirmDialog({ title, body, confirmLabel, onClose }: { title: s
     </Modal>
   )
 }
+
+export interface Choice {
+  value: string
+  label: string
+  primary?: boolean
+}
+
+/** A dialog with several answers (e.g. which marriage, or Move here / Add as alternative). */
+export function ChoiceDialog({ title, body, choices, onClose }: { title: string; body: string; choices: Choice[]; onClose: (value: string | null) => void }) {
+  const { t } = useLang()
+  return (
+    <Modal onDismiss={() => onClose(null)}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <h2>{title}</h2>
+        <p>{body}</p>
+        <div className="choice-list">
+          {choices.map((c, i) => (
+            <button key={c.value} className={`btn ${c.primary ? 'btn-primary' : ''}`} autoFocus={i === 0} onClick={() => onClose(c.value)}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div className="modal-actions">
+          <button className="btn" onClick={() => onClose(null)}>{t('actions.cancel')}</button>
+        </div>
+      </div>
+    </Modal>
+  )
+}

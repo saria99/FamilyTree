@@ -8,34 +8,60 @@ import { PERSON_H, PERSON_W, UNION_SIZE } from '../layout/layout'
 
 export type DropVerdict = 'ok' | 'warn' | 'bad' | null
 
-export type PersonNodeData = { person: Person; lang: Lang; verdict: DropVerdict; isMe: boolean; dimmed: boolean }
+export type PersonNodeData = {
+  person: Person
+  lang: Lang
+  verdict: DropVerdict
+  isMe: boolean
+  dimmed: boolean
+  editable: boolean
+  labels: { parents: string; sibling: string; children: string }
+}
 export type UnionNodeData = { marriage: Marriage; verdict: DropVerdict; dimmed: boolean }
 export type PersonFlowNode = Node<PersonNodeData, 'person'>
 export type UnionFlowNode = Node<UnionNodeData, 'union'>
 
 const hidden = { opacity: 0, width: 6, height: 6, minWidth: 0, minHeight: 0, border: 0 }
 
+/** Handle ids on the diamond: drag from one to another person to create that relationship. */
+export const HANDLE = { parents: 'parents', siblingStart: 'sibling-start', siblingEnd: 'sibling-end', children: 'children', in: 'in' } as const
+
+/**
+ * A person is a diamond (FR-046): the top point connects to parents, the side points to siblings and the
+ * bottom point to children. Existing lines arrive at the top (from the parents' ring) and leave from the bottom.
+ */
 export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
-  const { person, lang, verdict, isMe, dimmed } = data
+  const { person, lang, verdict, isMe, dimmed, editable, labels } = data
   const years = [yearOf(person.birth), yearOf(person.death)]
   const lifespan = years[0] || years[1] ? `${years[0] ?? '?'}${years[1] ? `–${years[1]}` : person.isLiving ? '' : '–?'}` : ''
-  const other = lang === 'ar' ? person.ismEn : person.ismAr
+  const other = person.ismAr && person.ismEn ? (lang === 'ar' ? person.ismEn : person.ismAr) : undefined
+  const W = PERSON_W
+  const H = PERSON_H
+  const connector = (id: string, position: Position, title: string) => (
+    <Handle id={id} type="source" position={position} isConnectable={editable} className={`diamond-handle ${editable ? '' : 'is-hidden'}`} title={title} aria-label={title} />
+  )
   return (
     <div
       className={`person-node gender-${person.gender} ${selected ? 'is-selected' : ''} ${verdict ? `drop-${verdict}` : ''} ${dimmed ? 'is-dimmed' : ''}`}
-      style={{ width: PERSON_W, height: PERSON_H }}
+      style={{ width: W, height: H }}
     >
-      <Handle type="target" position={Position.Top} style={hidden} isConnectable={false} />
-      <div className="person-name">
-        {personName(person, lang)}
-        {isMe && <span className="me-dot" aria-label="me">●</span>}
+      <svg className="diamond-shape" width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden>
+        <polygon points={`${W / 2},2 ${W - 2},${H / 2} ${W / 2},${H - 2} 2,${H / 2}`} />
+      </svg>
+      <Handle id={HANDLE.in} type="target" position={Position.Top} style={hidden} isConnectable={false} />
+      {connector(HANDLE.parents, Position.Top, labels.parents)}
+      {connector(HANDLE.siblingStart, Position.Left, labels.sibling)}
+      {connector(HANDLE.siblingEnd, Position.Right, labels.sibling)}
+      {connector(HANDLE.children, Position.Bottom, labels.children)}
+      <div className="diamond-body">
+        <div className="person-name">
+          {personName(person, lang)}
+          {isMe && <span className="me-dot" aria-label="me">●</span>}
+        </div>
+        {other && <div className="person-alt" dir="auto">{other}</div>}
+        {lifespan && <div className="person-years" dir="ltr">{lifespan}</div>}
+        <div className="person-id">{person.publicId}</div>
       </div>
-      {other && <div className="person-alt" dir="auto">{other}</div>}
-      <div className="person-meta">
-        <span dir="ltr">{lifespan}</span>
-        <span className="person-id">{person.publicId}</span>
-      </div>
-      <Handle type="source" position={Position.Bottom} style={hidden} isConnectable={false} />
     </div>
   )
 })

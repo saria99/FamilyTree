@@ -92,9 +92,9 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 ### Phase 0 revisions (2026-10-24)
 
 - [x] T122 [US1] Remove religious-rule and date checks from the browser rules (`web/src/domain/rules.ts`, `messages.ts`, `commands.ts`); keep integrity checks; update `test-vectors/rules.json` and the desktop test (5th wife accepted)
-- [ ] T123 [US3] Diamond person node with connectors top = parents, left/right = siblings, bottom = children in `web/src/features/editor/nodes.tsx`
-- [ ] T124 [US3] Drag from a connector to a person to create parent / sibling / child links (marriage picker, "other parent unknown") in `web/src/features/editor/FamilyCanvas.tsx` and `web/src/data/commands.ts`
-- [ ] T125 [US3] Free arrangement (positions kept in the tree data, rings follow spouses, Auto-arrange) and re-shifting (Move here / Add as alternative) with Playwright coverage in `web/tests/desktop.spec.ts`
+- [x] T123 [US3] Diamond person node with connectors top = parents, left/right = siblings, bottom = children in `web/src/features/editor/nodes.tsx`
+- [x] T124 [US3] Drag from a connector to a person to create parent / sibling / child links (marriage picker, "other parent unknown") in `web/src/features/editor/FamilyCanvas.tsx` and `web/src/data/commands.ts`
+- [x] T125 [US3] Free arrangement (positions kept in the tree data, rings follow spouses, Auto-arrange) and re-shifting (Move here / Add as alternative) with Playwright coverage in `web/tests/desktop.spec.ts`
 
 **Checkpoint (STOP)**: Collect feedback. Update spec.md/plan.md with what changed before starting Phase 1.
 

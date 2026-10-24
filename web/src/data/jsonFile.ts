@@ -80,6 +80,7 @@ const schema = z.object({
       quotation: z.string().optional(),
     }),
   ),
+  positions: z.record(z.string(), z.object({ x: z.number(), y: z.number() })).optional(),
   branches: z.array(z.object({ id: z.string(), nameAr: z.string().optional(), nameEn: z.string().optional(), rootPersonId: z.string().optional(), rootMarriageId: z.string().optional(), color: z.string() })),
 })
 
