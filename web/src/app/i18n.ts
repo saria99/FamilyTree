@@ -15,7 +15,7 @@ const en = {
     placeholder: 'Type a name and press Enter — or a chain like "Fatimah bint Muhammad ibn Abdullah"',
     chainTitle: 'Create lineage chain',
     newPerson: 'New person',
-    chainNote: 'Links are created as Unconfirmed with Low confidence. Cite a source later to verify them.',
+    chainNote: 'Links are recorded as entered. You can add a status or a source later if you wish.',
   },
   editor: {
     hint: 'Drag a person onto another person to record a marriage, or onto a marriage ring to add them as a child.',
@@ -39,8 +39,8 @@ const en = {
   },
   date: { year: 'Year', month: 'Month', day: 'Day', approx: 'approx.' },
   verification: {
-    status: 'Status', confidence: 'Confidence', needsSource: 'Cite a source before marking Verified',
-    statuses: { Verified: 'Verified', OralAccount: 'Oral account', Disputed: 'Disputed', Unconfirmed: 'Unconfirmed' },
+    status: 'Status', confidence: 'Confidence',
+    statuses: { Verified: 'Verified', OralAccount: 'Oral account', Disputed: 'Disputed', Unconfirmed: 'Not verified (default)' },
     confidences: { High: 'High', Medium: 'Medium', Low: 'Low' },
     legend: 'Legend', citations: '{{count}} source(s)',
   },
@@ -76,7 +76,7 @@ const ar: Resources = {
     placeholder: 'اكتب اسمًا واضغط Enter — أو سلسلة مثل «فاطمة بنت محمد بن عبدالله»',
     chainTitle: 'إنشاء سلسلة نسب',
     newPerson: 'شخص جديد',
-    chainNote: 'تُنشأ الروابط بحالة «غير مؤكد» وثقة منخفضة. أضف مصدرًا لاحقًا لتوثيقها.',
+    chainNote: 'تُسجَّل الروابط كما أُدخلت. يمكنك إضافة حالة أو مصدر لاحقًا إن شئت.',
   },
   editor: {
     hint: 'اسحب شخصًا إلى شخص آخر لتسجيل زواج، أو إلى حلقة الزواج لإضافته ابنًا.',
@@ -100,8 +100,8 @@ const ar: Resources = {
   },
   date: { year: 'السنة', month: 'الشهر', day: 'اليوم', approx: 'تقريبي' },
   verification: {
-    status: 'الحالة', confidence: 'الثقة', needsSource: 'أضف مصدرًا قبل التوثيق',
-    statuses: { Verified: 'موثق', OralAccount: 'رواية شفهية', Disputed: 'متنازع عليه', Unconfirmed: 'غير مؤكد' },
+    status: 'الحالة', confidence: 'الثقة',
+    statuses: { Verified: 'موثق', OralAccount: 'رواية شفهية', Disputed: 'متنازع عليه', Unconfirmed: 'غير موثق (افتراضي)' },
     confidences: { High: 'عالية', Medium: 'متوسطة', Low: 'منخفضة' },
     legend: 'مفتاح الرموز', citations: '{{count}} مصدر',
   },

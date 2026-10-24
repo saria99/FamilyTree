@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-family-tree-core`
 **Created**: 2026-10-06
-**Status**: Draft (clarified, elaborated 2026-10-17)
+**Status**: Draft (clarified, elaborated 2026-10-17, rules removed 2026-10-24)
 **Input**: User description: "Build a family tree website where a man can be married to more than one wife at the same time, and a woman can marry more than one man in sequence (at different times), following the Islamic way. The admin builds the tree visually by typing, drag-and-drop, or whatever suits creating these relationships, to show the children and grandchildren. Web and mobile apps."
 **Elaborated (2026-10-17)**: "Bayrab Genealogy — a genealogy management platform for documenting, exploring, and preserving the Bayrab family tree. It turns family histories, oral accounts, historical documents, and verified relationships into a structured, searchable, expandable digital family tree; supports paternal and maternal lineages, marriages, family branches, source citations, and confidence levels for each recorded relationship; distinguishes verified facts from oral accounts, disputed claims, and unconfirmed relationships; and offers PDF family trees, printable reports, and Excel/CSV import/export, scaling to thousands of individuals and multiple family branches."
 
@@ -11,49 +11,43 @@
 Bayrab Genealogy preserves the Bayrab family heritage as a reliable, maintainable, extensible digital record and a
 foundation for future research, collaboration, and publication. Three ideas shape every requirement below:
 
-1. **Islamic family structure** — a man may have up to four wives at the same time; a woman one husband at a time,
-   remarrying in sequence; every child is tied to a specific father and mother; lineage (nasab) follows the father,
-   while maternal lines are equally browsable.
-2. **Evidence before assumption** — every relationship carries a verification status (Verified, Oral account,
-   Disputed, Unconfirmed), a confidence level, and the sources behind it. The system never invents a relationship
-   and never hides the difference between a documented fact and a family story. Where sources disagree, competing
-   claims are kept side by side, with one marked preferred.
+1. **Islamic family structure, recorded as history** — a man may be recorded with several wives at the same time and a
+   woman with several husbands in sequence; every child is tied to a specific father and mother; lineage (nasab) follows
+   the father, while maternal lines are equally browsable. The platform does not enforce or warn about religious rules:
+   it records what the family reports.
+2. **Accepted by default, evidence optional** — information is taken as entered, without a verification step.
+   Relationships may optionally carry a status (Verified, Oral account, Disputed, Not verified — the default), a
+   confidence level and sources. The system never invents a relationship. Where accounts disagree, competing claims
+   can be kept side by side, with one marked preferred.
 3. **Access and output** — admins build the tree visually on the web; family members explore it on desktop or on their
    phones through the same web app installed as a PWA, landing on their own ancestors; the tree can be printed as PDF charts and reports and exchanged as
    Excel, CSV, or GEDCOM.
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Admin records people and Islamic marriages (Priority: P1)
+### User Story 1 - Admin records people and marriages (Priority: P1)
 
-An admin adds family members (name in Arabic and/or English, gender, birth/death dates) and records
-marriages between them. A man can have up to four wives at the same time; each marriage has its own
-start date and, if it ended, an end date and reason (divorce, death of spouse, annulment). A woman can
-be recorded with several husbands as long as the marriages do not overlap in time.
+An admin adds family members (name in Arabic and/or English, gender, birth/death dates) and records marriages between
+them. A man can be recorded with several wives at the same time, and a woman with several husbands one after another.
+Each marriage has its own start date and, if it ended, an end date and reason (divorce, khul', death, annulment).
+Everything is saved as entered: the platform does not check religious rules or dates.
 
-**Why this priority**: Correct marriage modelling is the whole reason for the product. Without it no tree
-can be built.
+**Why this priority**: Marriage records are the backbone of the tree. Without them no children or lineages can be shown.
 
-**Independent Test**: Using the admin web forms, create a man with three concurrent wives, and a woman who
-was married, divorced, and then remarried. Confirm both are saved and displayed, and that a fifth concurrent
-wife or an overlapping second husband is refused with a clear reason.
+**Independent Test**: Using the admin web forms, create a man with five wives and a woman who was married, divorced and
+remarried. Confirm all are saved and displayed with no warnings, in date order.
 
 **Acceptance Scenarios**:
 
-1. **Given** a man with 3 ongoing marriages, **When** the admin adds a 4th marriage, **Then** it is saved.
-2. **Given** a man with 4 ongoing marriages, **When** the admin adds a 5th marriage starting while all 4 are ongoing,
-   **Then** it is refused with the message "A man may not have more than four wives at the same time."
-3. **Given** a man with 4 marriages where one ended by divorce last year, **When** the admin adds a new marriage
-   starting after that divorce, **Then** it is saved.
-4. **Given** a woman whose marriage ended by divorce on a known date, **When** the admin adds a new marriage
-   to a different man starting after that date, **Then** it is saved and both husbands appear in her history in order.
-5. **Given** a woman with an ongoing marriage, **When** the admin adds a second marriage overlapping in time,
-   **Then** it is refused with the message "A woman may have only one husband at a time."
-6. **Given** two people who are mahram to each other according to the tree (e.g. a man and his sister, niece, or
-   his wife's sister while he is still married to the wife), **When** the admin tries to marry them, **Then** a warning
-   names the relationship and the marriage is saved only if the admin confirms (the tree records history, it does not rule on it).
-7. **Given** an admin creates a marriage without attaching a source, **When** it is saved, **Then** its verification
-   status is "Unconfirmed" with confidence "Low" unless the admin chooses otherwise (never "Verified" without a source).
+1. **Given** a man with 4 ongoing marriages, **When** the admin adds a 5th, **Then** it is saved without a warning.
+2. **Given** a woman with two recorded husbands, **When** the admin views her, **Then** both marriages are listed in date
+   order, each with its own children.
+3. **Given** any two people recorded as husband and wife, **When** saved, **Then** no relationship or date check is
+   applied (the tree records history; it does not rule on it).
+4. **Given** two men (or two women), **When** the admin tries to record them as husband and wife, **Then** the system
+   explains that a marriage is recorded as a husband and a wife and asks to check their gender.
+5. **Given** a new marriage, **When** saved, **Then** its status is "Not verified" by default; the admin may set any
+   status or none.
 
 ---
 
@@ -78,8 +72,7 @@ grandchild under the correct parent.
    "with X" and "with Y".
 3. **Given** a child with a preferred parentage, **When** the admin attaches them to a second set of parents, **Then** it is
    refused as a second *preferred* parentage, and the admin is offered to record it as an alternative (disputed) claim instead.
-4. **Given** a child whose birth date is before the parents' marriage start or more than the allowed period after the
-   marriage ended, **When** saved, **Then** the admin sees a warning to confirm the dates (it is not silently accepted or blocked).
+4. **Given** a child whose birth date does not fit the parents' dates, **When** saved, **Then** it is saved as entered.
 5. **Given** an orphan raised by a guardian (kafala), **When** the admin records the guardian, **Then** it is stored as
    guardianship, the child's lineage stays with the biological father, and the tree shows it as a dashed link.
 
@@ -91,6 +84,11 @@ The admin works on a visual canvas: types a name to add a person, drags a person
 a marriage, drags a person onto a marriage to add them as a child, and edits details in a side panel. The tree
 lays itself out automatically. A quick-entry mode lets the admin type entries like "Ahmad ibn Ali ibn Hasan" to
 create a lineage chain in one step.
+
+Each person is drawn as a **diamond** with four connectors: the **top** connector links to parents, the **left and
+right** connectors link to siblings, and the **bottom** connector links to children. The admin drags from a connector
+to another person to create that relationship, drags people freely to arrange the tree, and drags a child onto other
+parents to move (re-shift) the relationship.
 
 **Why this priority**: The user explicitly wants visual building with typing and drag-and-drop. This is how
 the P1 data actually gets entered.
@@ -105,8 +103,20 @@ two grandchildren) using only the canvas, with no forms outside it. Confirm the 
    opens pre-filled with both, asks for the start date, and creates the marriage on confirm.
 3. **Given** a marriage on the canvas, **When** the admin drags a person onto the marriage connector, **Then** the person
    becomes a child of that marriage.
-4. **Given** a drop that breaks a structural rule (e.g. same-gender marriage, 5th concurrent wife, child born before their parent),
-   **When** the admin releases it, **Then** nothing is changed and the reason is shown next to the drop point.
+4. **Given** a drop that breaks tree integrity (two people of the same gender as a couple, a person becoming their own
+   ancestor), **When** the admin releases it, **Then** nothing is changed and the reason is shown.
+7. **Given** a person's diamond, **When** the admin drags from its **top** connector to another person, **Then** that
+   person becomes a parent (the admin picks which of the parent's marriages, or "other parent unknown").
+8. **Given** a person's diamond, **When** the admin drags from its **bottom** connector to another person, **Then** that
+   person becomes a child of the first person (again choosing the marriage).
+9. **Given** a person with recorded parents, **When** the admin drags from a **side** connector to another person,
+   **Then** that person becomes a sibling (gets the same parents). If neither has parents yet, the admin is asked to
+   record a parent first.
+10. **Given** a child with parents, **When** the admin drops the child on another marriage ring (or connects it to
+    another parent), **Then** the admin chooses **Move here** (the relationship shifts to the new parents) or **Add as
+    alternative claim**.
+11. **Given** any person, **When** the admin drags them to an empty spot, **Then** they stay where dropped (the marriage
+    ring follows its spouses), and **Auto-arrange** restores the automatic layout.
 5. **Given** any change, **When** the admin presses Undo, **Then** the last change is reversed.
 6. **Given** quick entry "Fatimah bint Muhammad ibn Abdullah", **When** submitted, **Then** the system creates or
    matches Fatimah, Muhammad and Abdullah and links them father-to-child (asking which existing person to use if a
@@ -157,17 +167,18 @@ in the history. Open a shared link while signed out and confirm living people sh
 
 ---
 
-### User Story 6 - Sources, verification status and competing claims (Priority: P1)
+### User Story 6 - Optional sources, status labels and competing claims (Priority: P1)
 
 For every relationship (parentage, marriage, guardianship, milk kinship) and for key facts (names, birth, death),
 the admin records where the information comes from — a document, book, official record, gravestone, photo, website,
 or an oral account (who told it, to whom, when) — attaches scans or recordings, and sets a verification status
-(Verified, Oral account, Disputed, Unconfirmed) and confidence (High, Medium, Low). When sources disagree, for example
+(Verified, Oral account, Disputed, Not verified) and confidence (High, Medium, Low) — all optional; information is
+accepted without them. When sources disagree, for example
 two accounts naming different fathers, the admin records each as a separate claim with its own sources and marks one
 as preferred; the tree follows the preferred claim and shows the others as alternatives.
 
-**Why this priority**: The project's purpose is a *reliable* record. Without status and sources, oral tradition and
-documented fact become indistinguishable and unsupported lineage assumptions creep in.
+**Why this priority**: Noting where information came from is part of preserving it, even though nothing has to be
+verified before it is recorded.
 
 **Independent Test**: Record a parentage as an oral account citing a named narrator; record a competing parentage claim
 citing a document; mark the documented one preferred. The tree draws the preferred line solid and the alternative
@@ -175,16 +186,16 @@ dashed with a "Disputed" badge; the person's profile lists both claims with thei
 
 **Acceptance Scenarios**:
 
-1. **Given** a relationship with no cited source, **When** the admin sets it to "Verified", **Then** it is refused with
-   "A relationship can only be Verified when at least one source is cited."
+1. **Given** a relationship with no cited source, **When** the admin sets it to "Verified", **Then** it is saved (labels
+   are the admin's choice; no source is required).
 2. **Given** a child with a preferred parentage, **When** the admin adds an alternative parentage claim, **Then** both are
    stored, the preferred one still drives the tree, nasab and searches, and both are marked "Disputed".
 3. **Given** two competing claims, **When** the admin makes the alternative preferred, **Then** the tree, nasab chain and
    descendants' nasab update, and the change appears in history.
 4. **Given** an oral account, **When** recorded, **Then** it captures narrator (a person in the tree or a free-text name),
    date told, recorder, and optional audio/text attachment.
-5. **Given** a source cited by Verified relationships, **When** the admin deletes it, **Then** a warning lists the
-   affected relationships, and on confirmation those without another source drop to "Unconfirmed".
+5. **Given** a source cited by relationships, **When** the admin deletes it, **Then** the citations are removed and the
+   relationships keep their status.
 6. **Given** any viewer (desktop, phone, PDF), **When** a relationship is shown, **Then** its status is visible through a
    line style and badge explained by a legend.
 
@@ -257,25 +268,18 @@ two updates and one creation; after commit the tree reflects them and history at
 
 ### Edge Cases
 
-- A man with four wives divorces one; can a new marriage start the next day? Most scholars (Hanafi, Hanbali) hold that
-  a wife in iddah still counts toward the four, certainly after a revocable divorce. The system therefore saves it with a
-  `FIFTH_WIFE_DURING_IDDAH` warning while the divorced wife's iddah is running (FR-044); after the iddah it is saved
-  without warning. Marrying the divorced wife's sister, aunt, or niece during her iddah gives `FORBIDDEN_COMBINATION`.
-- Marriage dates unknown (common for older generations): the admin can mark a marriage with unknown dates; rule checks
-  then become warnings, not blocks, because overlap cannot be proven.
-- The same couple divorces and remarries: allowed as a second marriage record between the same two people, up to the
-  limit where a third divorce makes remarriage impossible without an intervening marriage; the system warns in that case.
-- A man marries two sisters at different times (second after the first's death or divorce and iddah): allowed.
+- Five or more concurrent wives, overlapping husbands, marriages between close relatives, remarriage during iddah,
+  a fourth marriage of the same couple, or dates that look impossible: all saved as entered, with no warning.
+- Marriage dates unknown (common for older generations): saved without dates.
 - Duplicate people (same name, same father): the editor offers to merge.
 - Deleting a person who has children or marriages: blocked until the admin confirms what happens to those links.
 - Very large trees (thousands of people): the viewer collapses distant branches and expands on demand.
 - Cycles: refused per FR-013, for preferred and alternative claims alike.
-- A disputed marriage that would be a fifth concurrent wife or a second concurrent husband: hard limits count only
-  marriages not marked "Disputed"; recording a disputed marriage that would break a limit produces a warning instead,
-  so conflicting accounts can still be documented.
-- Two sources give different birth years: the fact keeps one value with its status and sources; the other reading is
-  recorded as a second citation with its own quotation and noted on the fact.
-- A relationship entered by quick lineage entry ("A ibn B ibn C") with no source: created as "Unconfirmed", never "Verified".
+- Two sources give different birth years: the fact keeps one value; the other reading is recorded as a second citation
+  with its own quotation.
+- A relationship entered by quick lineage entry ("A ibn B ibn C"): created with the default status "Not verified".
+- A sibling link between two people who both have no recorded parents: the admin is asked to record a parent first,
+  because siblings are recorded through shared parents.
 - An imported spreadsheet row without a person ID: matched by normalised name + father when unambiguous, otherwise
   offered as "new or merge" in the preview.
 
@@ -294,19 +298,13 @@ two updates and one creation; after commit the tree reflects them and history at
 
 - **FR-003**: A marriage MUST link exactly one man (husband) and one woman (wife) with a start date, optional end date,
   and an end reason (divorce, death, annulment). Divorces MAY record the type (revocable / irrevocable) and count.
-- **FR-004**: The system MUST refuse a marriage that would give a man more than four wives whose marriages overlap in time.
-- **FR-005**: The system MUST refuse a marriage that would give a woman two husbands whose marriages overlap in time.
-- **FR-006**: When a woman's new marriage starts inside her waiting period (iddah) after divorce or her husband's death,
-  the system MUST warn and save only after the admin confirms.
-- **FR-007**: The system MUST warn (admin confirms) about marriages between people who are mahram by blood or marriage as far as the tree
-  shows (parents/ancestors, children/descendants, siblings, aunts/uncles, nieces/nephews, spouse's ancestors and
-  descendants), and about a man being married at the same time to two women who are sisters, or a woman and her
-  paternal or maternal aunt. Confirmed warnings MUST be stored with the record and shown as a flag to admins.
-- **FR-008**: The system MUST refuse marriages between two people of the same gender.
-- **FR-009**: When marriage dates are unknown or partial, rule checks that depend on them MUST become warnings the admin
-  confirms, instead of blocks.
-- **FR-044**: The system MUST warn (`FIFTH_WIFE_DURING_IDDAH`, admin confirms) when a man's new marriage starts while he
-  already has four wives counting any wife still in iddah from a divorce by him.
+- **FR-004**: The system MUST accept any number of wives for a man, concurrent or not, and any sequence or overlap of
+  husbands for a woman, as entered.
+- **FR-005**: The system MUST NOT enforce, block or warn about religious rules (number of wives, one husband at a time,
+  mahram relationships, combining sisters, iddah, third divorce).
+- **FR-006**: The system MUST NOT warn about implausible or inconsistent dates; dates are stored as entered.
+- **FR-008**: A marriage MUST be recorded as one husband (male) and one wife (female); recording two people of the same
+  gender as a couple is refused with a request to check their gender.
 
 **Children & lineage**
 
@@ -315,13 +313,9 @@ two updates and one creation; after commit the tree reflects them and history at
   be recorded with a known father but unknown mother (placeholder wife), or vice versa. All children of the same known
   parent whose other parent is unknown share **one** placeholder marriage, so they appear as one group, unless the
   admin splits them.
-- **FR-011**: The system MUST warn when a child's birth date is before the parents' marriage start date, or later than
-  the end of the marriage plus the allowed pregnancy period, and when a child is born before a parent is old enough.
 - **FR-012**: Guardianship (kafala) and milk kinship (rada'a) MUST be recordable as separate relationships that never change
-  lineage. Milk kinship MUST count in the mahram checks of FR-007.
+  lineage.
 - **FR-013**: The system MUST refuse any change that would make a person their own ancestor.
-- **FR-045**: The system MUST refuse a parentage where the child's birth is certainly before a parent's birth
-  (`CHILD_BORN_BEFORE_PARENT`); when the dates only possibly conflict it is a `PARENT_TOO_YOUNG` warning (FR-011).
 
 **Visual editor**
 
@@ -329,7 +323,12 @@ two updates and one creation; after commit the tree reflects them and history at
   by dragging one onto the other; add a child by dragging a person onto a marriage; edit details in a side panel.
 - **FR-015**: The canvas MUST lay out the tree automatically, grouping each man's wives beside him and each marriage's
   children beneath that marriage, so half-siblings are visibly separate.
-- **FR-016**: Invalid edits on the canvas MUST be refused with the specific rule and people named.
+- **FR-016**: Edits that break tree integrity (FR-008, FR-010, FR-013) MUST be refused with the reason and people named.
+- **FR-046**: Each person MUST be drawn as a diamond with connectors: top = parents, left/right = siblings, bottom =
+  children. Dragging from a connector to another person MUST create that relationship (asking which marriage when the
+  parent has several, with "other parent unknown" as an option).
+- **FR-047**: Admins MUST be able to drag people freely to arrange the tree (positions are kept), restore the automatic
+  layout, and move a child's relationship to other parents by dragging (Move here / Add as alternative claim).
 - **FR-017**: Admins MUST be able to undo and redo their changes within a session.
 - **FR-018**: Admins MUST be able to quick-enter a lineage chain as text ("A ibn B ibn C" / "A bint B ibn C", in Arabic or
   English) and resolve each name to an existing or new person.
@@ -358,22 +357,21 @@ two updates and one creation; after commit the tree reflects them and history at
 
 **Evidence, verification and competing claims**
 
-- **FR-028**: Every relationship (parentage claim, marriage, guardianship, milk kinship) MUST carry a verification status —
-  Verified, Oral account, Disputed, Unconfirmed — and a confidence level — High, Medium, Low. New relationships default
-  to Unconfirmed / Low unless set otherwise.
+- **FR-028**: Every relationship (parentage claim, marriage, guardianship, milk kinship) MAY carry a status — Verified,
+  Oral account, Disputed, Not verified — and a confidence level — High, Medium, Low. These are optional labels; new
+  relationships default to Not verified / Low and are accepted without any verification step.
 - **FR-029**: Admins MUST be able to manage sources: type (document, book, official record, gravestone, photo, website,
   oral account, other), title, author/narrator, date, repository/location, reference/URL, notes, and attachments
   (images, PDFs, audio). Oral accounts MUST record narrator, date told, and recorder.
 - **FR-030**: Admins MUST be able to cite one or more sources on any relationship and on person facts (names, birth,
-  death), with an optional page/detail and quotation per citation. A relationship MUST NOT be set to Verified without at
-  least one citation.
+  death), with an optional page/detail and quotation per citation. Citations are optional for every status.
 - **FR-031**: Admins MUST be able to record competing parentage claims for one person, each with its own status,
   confidence, and citations; exactly one MUST be preferred. Switching the preferred claim MUST update the tree and nasab.
-  Recording an alternative claim MUST mark all of that person's parentage claims Disputed unless the admin resolves it.
+  Recording an alternative claim marks that person's parentage claims Disputed (a label the admin can change).
 - **FR-032**: The system MUST NOT create or infer a relationship that the admin did not enter (e.g. it never assumes a
   child's mother from the father's only wife, nor a marriage from shared children).
 - **FR-033**: Every view and output (canvas on desktop and phone, profiles, PDFs, exports) MUST show each relationship's status with a
-  consistent visual language (e.g. solid = Verified, dashed = Oral account, dotted red = Disputed, grey = Unconfirmed) and a legend.
+  consistent visual language (e.g. solid = Verified, dashed = Oral account, dotted red = Disputed, plain grey = Not verified, the default) and a legend.
 - **FR-034**: Admins MUST be able to list and filter relationships by status, confidence, and "has no source" to drive research.
 
 **Identity, lineages and branches**
@@ -413,7 +411,7 @@ two updates and one creation; after commit the tree reflects them and history at
 - **Parentage Claim**: A statement that a person is the child of a specific marriage, with status, confidence,
   citations, and a preferred flag (exactly one preferred per person).
 - **Guardianship / Milk kinship**: Non-lineage relationship between two people with type and optional dates.
-- **Verification**: Status (Verified, Oral account, Disputed, Unconfirmed) and confidence (High, Medium, Low) attached to
+- **Verification** (optional): Status (Verified, Oral account, Disputed, Not verified) and confidence (High, Medium, Low) attached to
   every relationship.
 - **Source**: Where information comes from — type, title, author or narrator, date, repository, reference, attachments.
 - **Citation**: The link between a source and a relationship or person fact, with page/detail and optional quotation.
@@ -428,16 +426,15 @@ two updates and one creation; after commit the tree reflects them and history at
 ### Measurable Outcomes
 
 - **SC-001**: An admin with no training can build a 3-generation tree of 20 people with polygamous and sequential marriages in under 15 minutes.
-- **SC-002**: 100% of structural violations (5th concurrent wife, overlapping husband, same-gender marriage, cycles,
-  a second preferred parentage) are refused with a clear reason, and 100% of judgment cases (mahram, iddah, third divorce,
-  date inconsistencies) produce a warning naming the people and rule.
+- **SC-002**: 100% of historical records are saved as entered with no religious-rule or date warnings; only integrity
+  problems (same-gender couple, cycles, a second preferred parentage, duplicate claim) are refused, with a clear reason.
 - **SC-003**: For any person, a viewer can tell which mother (or which husband, for a woman) each child comes from, in one glance and without opening details.
 - **SC-004**: A tree of 5,000 people opens and becomes usable on a mid-range phone in under 3 seconds, and search results appear in under 1 second.
 - **SC-005**: Every screen is fully usable in Arabic RTL and English LTR, with no layout breakage.
 - **SC-006**: A GEDCOM export followed by import into an empty tree gives the same people, marriages, and children.
-- **SC-007**: 100% of relationships display a verification status in every view and output, and 0 relationships are
-  Verified without a cited source.
-- **SC-008**: A viewer can tell, without opening details, whether a line in the tree is verified, oral, disputed, or unconfirmed.
+- **SC-007**: Where a status other than the default is set, it is visible in every view and output; default relationships
+  draw as plain lines.
+- **SC-008**: A viewer can tell, without opening details, whether a line in the tree is verified, oral, disputed, or not verified.
 - **SC-009**: A descendant-chart PDF of a 500-person branch is ready in under 30 seconds.
 - **SC-010**: An Excel export of a 5,000-person tree re-imported into an empty tree reproduces the same people, IDs,
   relationships, statuses, and citations.
@@ -469,9 +466,19 @@ two updates and one creation; after commit the tree reflects them and history at
 - Q: Does the PWA replace the native mobile app? → A: Yes. One React app: admin editor on desktop, installable viewer
   on phones; no React Native app.
 
+### Session 2026-10-24
+
+- Q: Islamic rule governance? → A: Remove it. The platform gives historical information only: no enforcement or warnings
+  for religious rules or dates; information is taken by default without verification.
+- Q: Status and sources? → A: Keep as optional labels; "Verified" no longer needs a source; default "Not verified".
+- Q: Integrity checks? → A: Keep only what keeps the tree drawable: no cycles, no duplicate claim, one preferred
+  parentage, husband + wife.
+- Q: Person shape and editing? → A: Diamond with connectors (top = parents, sides = siblings, bottom = children);
+  drag and drop to arrange people and to move relationships.
+
 ## Assumptions
 
-- Purpose: let family members see their ancestors (and how branches connect through multiple wives and sequential husbands). A historical genealogy record. The system records what happened and highlights possible inconsistencies; it does not issue religious rulings.
+- Purpose: let family members see their ancestors (and how branches connect through multiple wives and sequential husbands). A historical genealogy record. The system records what is reported, as entered, without checking it against religious rules.
 
 - The Bayrab family tree is the first tree on the platform; multi-tree support (FR-025) remains so other branches or
   families can be hosted later.
@@ -481,11 +488,7 @@ two updates and one creation; after commit the tree reflects them and history at
 - Source attachments are stored by the platform (scans, PDFs, audio up to a configurable size, default 25 MB each) and
   follow the same visibility rules as the people they concern.
 - Admins are trusted family members; there is no approval workflow for edits in this release (history and undo are the safety net).
-- Gender is binary (male/female) as required by Islamic marriage rules.
-- "Allowed pregnancy period" for FR-011 uses a configurable default (e.g. 4 years, reflecting classical opinions) and only produces warnings.
-- Mahram checks are limited to what the recorded data proves. Missing links mean no block.
-- The triple-divorce rule (no remarriage to the same wife after a third divorce without an intervening marriage) is a warning,
-  because older records are often incomplete.
+- Gender is binary (male/female); a marriage is recorded as husband + wife.
 - Editing is done only by admins in the web app on desktop. On phones, the installed web app (PWA) is for viewing and
   searching (no editing).
 - Hijri and Gregorian dates are both stored and converted for display. Exact day conversion may vary by one day, which is acceptable.

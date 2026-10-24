@@ -49,25 +49,25 @@ test('sample tree renders with statuses and legend', async ({ page }) => {
   await page.screenshot({ path: 'test-results/desktop-editor.png' })
 })
 
-test('four wives allowed, fifth refused, undo works', async ({ page }) => {
+test('a fifth wife is accepted (no religious rule checks) and undo works', async ({ page }) => {
   await addPerson(page, 'Zubayr', 'Male')
   for (const w of ['WifeA', 'WifeB', 'WifeC', 'WifeD', 'WifeE']) await addPerson(page, w, 'Female')
   await marry(page, 'WifeA', 'Zubayr', '2000')
   await marry(page, 'WifeB', 'Zubayr', '2001')
   await marry(page, 'WifeC', 'Zubayr', '2002')
   await marry(page, 'WifeD', 'Zubayr', '2003')
-  await expect(page.getByRole('alertdialog')).toHaveCount(0)
-
   await marry(page, 'WifeE', 'Zubayr', '2004')
-  const refusal = page.getByRole('alertdialog')
-  await expect(refusal).toContainText('more than four wives')
-  await page.screenshot({ path: 'test-results/desktop-fifth-wife.png' })
-  await refusal.getByRole('button', { name: 'Close' }).click()
-  // The marriage dialog stays open so the date can be corrected; cancel it.
-  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await expect(page.locator('.react-flow__node-union')).toHaveCount(13)
+  await page.screenshot({ path: 'test-results/desktop-five-wives.png' })
 
   await page.getByRole('button', { name: /Undo/ }).click()
-  await expect(page.locator('.react-flow__node-union')).toHaveCount(11)
+  await expect(page.locator('.react-flow__node-union')).toHaveCount(12)
+})
+
+test('two men cannot be recorded as husband and wife', async ({ page }) => {
+  await drag(page, node(page, 'Yusuf'), node(page, 'Hasan'))
+  await expect(page.getByRole('alertdialog')).toContainText('husband and a wife')
 })
 
 test('dragging a child with preferred parents offers an alternative claim', async ({ page }) => {

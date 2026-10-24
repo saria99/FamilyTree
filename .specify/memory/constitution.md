@@ -1,15 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 1.2.0 → 2.0.0 (MAJOR: Principle V redefined from "two clients" to one React PWA; backend
-  architecture constraint changed from Clean Architecture layers to vertical slice architecture)
-- Modified principles: II (single React client), V (One API, One Installable Web Client), VII (one backend project)
+- Version change: 2.0.0 → 3.0.0 (MAJOR: religious-rule governance removed; the platform records history as given)
+- Modified principles: I (Islamic Family Structure — model only, no rule enforcement or warnings),
+  II (renamed: Data Integrity on the Server), III (tests for integrity checks and endpoints),
+  VIII (renamed: Optional Evidence — statuses and sources are optional labels, no verification requirement)
 - Added sections: none
-- Removed sections: none (React Native / Expo removed from Technology constraints)
+- Removed sections: none
 - Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check reads gates from this file; no edit needed)
-  ✅ .specify/templates/spec-template.md (no mandatory section changes)
-  ✅ .specify/templates/tasks-template.md (no structural change)
-  ✅ specs/001-family-tree-core/* regenerated on 2026-10-21 for vertical slices + PWA
+  ✅ .specify/templates/* (no structural change)
+  ✅ specs/001-family-tree-core/spec.md, research.md, data-model.md, contracts/rule-codes.md, plan.md, tasks.md
+    updated on 2026-10-24
 - Follow-up TODOs: none
 -->
 
@@ -23,48 +23,43 @@ family tree, and that serves as a foundation for future research, collaboration,
 
 ## Core Principles
 
-### I. Islamic Family Law Is the Domain Model (NON-NEGOTIABLE)
+### I. Islamic Family Structure (NON-NEGOTIABLE)
 
-The data model and validation rules MUST reflect Islamic marriage and lineage (nasab) rules,
-not a Western "two parents, one spouse" genealogy model:
+The data model MUST be able to represent Islamic family history, not only a Western "two parents,
+one spouse" genealogy:
 
-- A man MAY have up to **four** wives whose marriages overlap in time. A fifth concurrent
-  marriage MUST be rejected.
-- A woman MUST have at most **one** husband at any point in time. She MAY marry again
-  **in sequence** after divorce or the husband's death. Overlapping marriage periods for a
-  woman MUST be rejected.
-- A marriage is a first-class entity (husband, wife, start date, end date, end reason:
-  divorce / death / annulment (faskh) / ongoing). Marriages are never inferred from children.
-- Every person with recorded parents has exactly one **preferred** parentage: one marriage (a specific
-  father **and** mother), so half-siblings through different wives or different husbands are always
-  distinguishable. Alternative parentage claims MAY exist (Principle VIII) but never replace the
+- A man MAY have several wives at the same time; a woman MAY have several husbands one after
+  another. Each marriage is a first-class record (husband, wife, start date, end date, how it
+  ended: divorce / khul' / annulment (faskh) / death / ongoing). Marriages are never inferred
+  from children.
+- Every person with recorded parents has exactly one **preferred** parentage: one marriage (a
+  specific father **and** mother), so half-siblings through different wives or different husbands
+  are always distinguishable. Alternative parentage claims MAY exist but never replace the
   preferred line silently.
-- Hard concurrency limits (four wives, one husband) count marriages that are not marked Disputed; a
-  disputed marriage that would break them is recorded with a warning.
-- Lineage (nasab) follows the father. Adoption/fostering (kafala) MUST NOT be stored as
-  biological parentage; it is a separate, optional relationship type.
-- The product is a **historical record**, not a marriage authority. Structural rules above are
-  hard constraints. Judgment rules (mahram relationships detectable from the tree, combining
-  sisters, iddah, third divorce, implausible dates) MUST produce warnings that an admin confirms;
-  the confirmation is stored with the record.
+- Lineage (nasab) follows the father; maternal lines are equally browsable. Guardianship (kafala)
+  and milk kinship are separate relationships and never change lineage.
+- The platform is a **historical record, not a religious authority**. It MUST NOT enforce, block,
+  or warn about religious rules (number of wives, one husband at a time, mahram, iddah, third
+  divorce) or about implausible dates. Information is accepted as given.
 
-Rationale: these rules are the reason the product exists, and real history must still be
-recordable even when it is messy or incomplete.
+Rationale: the family wants to preserve history as it was told and recorded, without the system
+judging it.
 
-### II. Rules Enforced on the Server, Mirrored on the Clients
+### II. Data Integrity on the Server
 
-All relationship rules from Principle I MUST be enforced in the .NET domain layer and by
-PostgreSQL constraints where expressible (e.g. exclusion constraints on overlapping date
-ranges). The React client MAY pre-validate for fast feedback but MUST NOT be the only line of
-defense. Validation errors MUST be returned as structured problem details with a machine-readable
-code so every screen shows the same message (Arabic and English).
+Only checks that keep the tree consistent and drawable are enforced: a marriage is a husband (man)
+and a wife (woman); one preferred parentage per person; no duplicate parentage claim; nobody becomes
+their own ancestor; records are never linked across trees. These MUST be enforced in the .NET
+`Domain/` kernel and by PostgreSQL constraints where expressible. The React client MAY pre-check
+them for fast feedback. Errors MUST be returned as structured problem details with a
+machine-readable code so every screen shows the same message (Arabic and English).
 
-### III. Test-First for Domain Rules
+### III. Test-First for Integrity Checks and Endpoints
 
-Every marriage, parentage, and mahram rule MUST have automated tests written before or with
-its implementation, covering the allowed case and the rejected case (e.g. 4th wife allowed,
-5th concurrent wife rejected; remarriage after divorce allowed, overlapping husband rejected).
-API endpoints MUST have integration tests against a real PostgreSQL (Testcontainers).
+Every integrity check in Principle II MUST have automated tests for the accepted and the refused
+case, and tests MUST also show that religious-rule situations (e.g. a fifth concurrent wife,
+overlapping husbands) are accepted. API endpoints MUST have integration tests against a real
+PostgreSQL (Testcontainers).
 
 ### IV. Visual, Forgiving Tree Editing
 
@@ -97,21 +92,21 @@ Start with the simplest design that satisfies the rules (YAGNI): one database, o
 project, one client application, no microservices. The UI MUST support Arabic (RTL) and English (LTR) from the first release,
 including Arabic names (ism, nasab chain "ibn/bint", laqab, kunya).
 
-### VIII. Evidence Before Assumption (NON-NEGOTIABLE)
+### VIII. Optional Evidence
 
-- Every relationship (parentage claim, marriage, guardianship, milk kinship) MUST carry a verification
-  status — **Verified**, **Oral account**, **Disputed**, **Unconfirmed** — and a confidence level
-  (High / Medium / Low). The default is Unconfirmed / Low.
-- A relationship MUST NOT be Verified unless at least one source is cited. Oral accounts MUST record
-  the narrator and when the account was given.
-- The system MUST NOT create or infer relationships the admin did not enter, and MUST NOT upgrade a
-  status automatically.
-- When sources disagree, each claim is stored with its own sources and status; exactly one claim per
+- Relationships MAY carry a status — **Verified**, **Oral account**, **Disputed**, **Not verified**
+  (default) — and a confidence level (High / Medium / Low). These are optional labels: nothing is
+  required to set any of them, and no verification step exists.
+- Sources and citations MAY be attached to relationships and facts as references.
+- The system MUST NOT create or infer relationships that were not entered (it records history, it
+  does not reconstruct it), and MUST NOT change a status automatically.
+- When accounts disagree, each claim MAY be stored with its own sources; exactly one claim per
   person is preferred.
-- Every view and output MUST show status with a consistent visual language and a legend, so verified
-  facts are never confused with oral accounts, disputed claims, or unconfirmed relationships.
+- Where statuses are used, views and outputs show them with one consistent visual language and a
+  legend; the default status draws as a plain line.
 
-Rationale: the platform's value is reliability; unsupported lineage assumptions are the main risk to it.
+Rationale: the family wants history recorded by default without verification, while keeping the
+option to note where information came from.
 
 ### IX. Stable Identity and Data Portability
 
@@ -152,4 +147,4 @@ principle added or materially expanded; PATCH: wording), and updates to affected
 Every plan MUST pass the Constitution Check before implementation; complexity beyond these
 rules MUST be justified in the plan's Complexity Tracking table.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-21
+**Version**: 3.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-24

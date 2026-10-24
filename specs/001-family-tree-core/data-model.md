@@ -30,8 +30,8 @@ Stored as a set of columns with a prefix (e.g. `birth_`):
 | `verification_status` | smallint | 0 Unconfirmed (default), 1 OralAccount, 2 Disputed, 3 Verified |
 | `confidence` | smallint | 0 Low (default), 1 Medium, 2 High |
 
-Verified requires ≥1 citation: domain rule `VERIFIED_REQUIRES_SOURCE` plus the deferred constraint trigger
-`trg_verified_has_citation` on `marriage`, `parentage_claim`, `kinship_link` (checked at commit).
+Status and confidence are optional labels (2026-10-24): any status may be set with or without citations; the default
+(`Unconfirmed`, shown as "Not verified") draws as a plain line.
 
 ## Entities
 
@@ -103,8 +103,7 @@ Password reset uses Identity's token provider (no extra table).
 
 Constraints:
 - `CHECK (husband_id IS DISTINCT FROM wife_id)`; at least one spouse not NULL.
-- `EXCLUDE USING gist (tree_id WITH =, wife_id WITH =, certain_period WITH &&) WHERE (wife_id IS NOT NULL AND certain_period IS NOT NULL AND deleted_at IS NULL AND verification_status <> 2)` — one husband at a time; Disputed excluded (constitution I).
-- Max-four-wives enforced in domain under `SELECT ... FOR UPDATE` on the husband row (R2), Disputed excluded, iddah extension → warning only.
+- No limit on concurrent wives and no overlap constraint on husbands: marriages are recorded as history (2026-10-24).
 - At most one placeholder marriage per known parent: partial unique indexes `(tree_id, husband_id) WHERE wife_id IS NULL AND deleted_at IS NULL` and `(tree_id, wife_id) WHERE husband_id IS NULL AND deleted_at IS NULL` (U1, R27).
 - Gender correctness checked in domain (cross-table, not a CHECK).
 
@@ -231,37 +230,23 @@ source *─* stored_file (attachments); person ─1 stored_file (photo)
 branch ─1 (person | marriage) root; members computed
 ```
 
-## Validation rules (domain, code → class)
+## Integrity checks (domain, code → class)
+
+Since 2026-10-24 no religious or date rules are checked; only what keeps the tree consistent:
 
 | Code | Class | Rule |
 |---|---|---|
-| SAME_GENDER_MARRIAGE | Violation | husband Male, wife Female |
-| MAX_CONCURRENT_WIVES | Violation | ≤4 certain-overlapping non-Disputed marriages for a husband at any instant |
-| WIFE_HAS_HUSBAND | Violation | no certain overlap of a woman's non-Disputed marriages |
-| POSSIBLE_OVERLAP | Warning | overlap only possible due to vague dates (either rule above) |
-| FIFTH_WIFE_DURING_IDDAH | Warning | 5th concurrency exists only when divorced wives' iddah is counted (D1, FR-044) |
-| DISPUTED_EXCEEDS_LIMIT | Warning | a Disputed marriage would break the 4-wife or 1-husband limit |
-| CHILD_HAS_PARENTS | Violation | setting a second *preferred* parentage (offer: add as alternative) |
+| SAME_GENDER_MARRIAGE | Violation | a marriage is a husband (Male) + a wife (Female) |
+| CHILD_HAS_PARENTS | Violation | setting a second *preferred* parentage (offer: move, or add as alternative) |
 | DUPLICATE_PARENTAGE_CLAIM | Violation | same child + same marriage claimed twice |
 | ANCESTOR_CYCLE | Violation | any claim (preferred or alternative) makes a person their own ancestor |
-| CHILD_BORN_BEFORE_PARENT | Violation | child's birth bounds entirely before a parent's birth bounds (I1, FR-045) |
-| DEATH_BEFORE_BIRTH | Violation | death bounds entirely before birth bounds |
-| VERIFIED_REQUIRES_SOURCE | Violation | status Verified with zero citations |
 | PERSON_HAS_LINKS | Violation | delete person with marriages/claims unless `cascade=detach` |
 | CROSS_TREE_LINK | Violation | DB composite FK |
-| MAHRAM_BLOOD / MAHRAM_MARRIAGE / MAHRAM_MILK | Warning | see research R4 (preferred lineage) |
-| FORBIDDEN_COMBINATION | Warning | sisters, or woman + her aunt, married to the same man at possibly overlapping times (incl. iddah) |
-| IDDAH_OVERLAP | Warning | wife's new marriage starts before previous end + iddah |
-| THIRD_DIVORCE | Warning | same couple remarries after cumulative divorce_count ≥3 without her intervening marriage |
-| BIRTH_OUTSIDE_MARRIAGE_PERIOD | Warning | child birth < start or > end + max_pregnancy_days |
-| PARENT_TOO_YOUNG | Warning | parent < 12 years old at child's birth (bounds-based, possible only) |
-| SOURCE_IN_USE | Warning | deleting a source cited by Verified relationships (they drop to Unconfirmed if uncited) |
 
 ## State transitions
 
 - Marriage: `Ongoing → Ended(reason)`; `Ended → Ongoing` only by editing (correction), audited.
-- Verification: any status ↔ any status by admin; → Verified only with ≥1 citation; never changed automatically except
-  the documented downgrade when the last citing source is deleted (SOURCE_IN_USE acknowledged).
+- Verification: any status ↔ any status by admin, with or without citations; never changed automatically.
 - Parentage claims: `none → preferred`; adding a second claim → both Disputed (unless admin overrides);
   `alternative ↔ preferred` swap in one command; deleting the preferred claim promotes nothing automatically —
   the admin must choose (constitution VIII: no inference).

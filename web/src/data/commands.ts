@@ -1,5 +1,5 @@
 import type { Citation, Marriage, ParentageClaim, Person, Source, TreeData, Verification } from './model'
-import { checkMarriage, checkParentage, checkPerson, citationCount, isBlocked, type MarriageInput, type RuleOutcome } from '../domain/rules'
+import { checkMarriage, checkParentage, isBlocked, type MarriageInput, type RuleOutcome } from '../domain/rules'
 import { SEVERITY, type RuleCode } from '../domain/messages'
 import type { LineageSegment } from '../domain/text'
 
@@ -35,8 +35,6 @@ export function addPerson(data: TreeData, input: NewPerson): CommandResult {
 }
 
 export function updatePerson(data: TreeData, person: Person): CommandResult {
-  const outcome = checkPerson(person)
-  if (isBlocked(outcome, [])) return { ok: false, outcome }
   const married = data.marriages.some((m) => m.husbandId === person.id || m.wifeId === person.id)
   const previous = data.persons.find((p) => p.id === person.id)
   if (married && previous && previous.gender !== person.gender) return blocked('SAME_GENDER_MARRIAGE', [person.id])
@@ -100,7 +98,6 @@ export function preferClaim(data: TreeData, claimId: string): CommandResult {
 }
 
 export function updateVerification(data: TreeData, kind: 'marriage' | 'claim' | 'kinship', id: string, v: Verification): CommandResult {
-  if (v.status === 'Verified' && citationCount(data, kind, id) === 0) return blocked('VERIFIED_REQUIRES_SOURCE')
   const patch = <T extends { id: string } & Verification>(list: T[]) => list.map((x) => (x.id === id ? { ...x, ...v } : x))
   if (kind === 'marriage') return { ok: true, data: { ...data, marriages: patch(data.marriages) } }
   if (kind === 'claim') return { ok: true, data: { ...data, claims: patch(data.claims) } }
@@ -128,12 +125,6 @@ export function addCitation(data: TreeData, citation: Omit<Citation, 'id'>): Com
 export function deleteCitation(data: TreeData, citationId: string): CommandResult {
   const citation = data.citations.find((c) => c.id === citationId)
   if (!citation) return { ok: true, data }
-  const { kind, id } = citation.target
-  if (kind !== 'person') {
-    const list = kind === 'marriage' ? data.marriages : kind === 'claim' ? data.claims : data.links
-    const target = list.find((x) => x.id === id)
-    if (target?.status === 'Verified' && citationCount(data, kind, id) === 1) return blocked('VERIFIED_REQUIRES_SOURCE')
-  }
   return { ok: true, data: { ...data, citations: data.citations.filter((c) => c.id !== citationId) } }
 }
 
@@ -143,7 +134,7 @@ export interface LineageChoice extends LineageSegment {
 
 /**
  * Quick entry "A ibn B ibn C": create or reuse each person, then link each to its father through the
- * father's placeholder marriage (unknown mother, reused per father — U1). Links are Unconfirmed / Low.
+ * father's placeholder marriage (unknown mother, reused per father — U1). Links default to Unconfirmed / Low.
  */
 export function addLineage(data: TreeData, chain: LineageChoice[], lang: 'ar' | 'en'): CommandResult {
   let next = data
@@ -167,7 +158,7 @@ export function addLineage(data: TreeData, chain: LineageChoice[], lang: 'ar' | 
       placeholder = { id: newId('m'), husbandId: fatherId, wifeId: null, endReason: 'Unknown', status: 'Unconfirmed', confidence: 'Low', flags: [] }
       next = { ...next, marriages: [...next.marriages, placeholder] }
     }
-    const r = addClaim(next, { childId, marriageId: placeholder.id, preferred: true, status: 'Unconfirmed', confidence: 'Low' }, ['PARENT_TOO_YOUNG', 'BIRTH_OUTSIDE_MARRIAGE_PERIOD'])
+    const r = addClaim(next, { childId, marriageId: placeholder.id, preferred: true, status: 'Unconfirmed', confidence: 'Low' }, [])
     if (!r.ok) return r
     next = r.data
   }

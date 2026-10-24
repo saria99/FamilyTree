@@ -40,13 +40,11 @@ export function VerificationFields({
         {t('verification.status')}
         <select value={status} onChange={(e) => onChange(e.target.value as VerificationStatus, confidence)}>
           {(['Unconfirmed', 'OralAccount', 'Disputed', 'Verified'] as const).map((s) => (
-            <option key={s} value={s} disabled={s === 'Verified' && citationCount === 0} title={s === 'Verified' && citationCount === 0 ? t('verification.needsSource') : undefined}>
-              {t(`verification.statuses.${s}`)}
-              {s === 'Verified' && citationCount === 0 ? ` — ${t('verification.needsSource')}` : ''}
-            </option>
+            <option key={s} value={s}>{t(`verification.statuses.${s}`)}</option>
           ))}
         </select>
       </label>
+      {citationCount > 0 && <span className="muted small">{t('verification.citations', { count: citationCount })}</span>}
       <label>
         {t('verification.confidence')}
         <select value={confidence} onChange={(e) => onChange(status, e.target.value as Confidence)}>

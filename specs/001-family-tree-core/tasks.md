@@ -13,6 +13,10 @@ description: "Task list for 001-family-tree-core (Bayrab Genealogy) — vertical
 **Order**: **Phase 0 is a visual prototype**: no backend and no database. It uses fictional sample data in the
 browser's storage plus JSON file save/load, and deploys to GitHub Pages for feedback. Backend phases start after feedback.
 
+**2026-10-24**: religious-rule governance removed (research R31). Rule tasks below are reduced to the integrity checks
+(same-gender couple, one preferred parentage, duplicate claim, cycles); mahram/iddah/limit/date/Verified-source work is dropped.
+Diamond nodes and drag-to-relate added as T122–T125 (research R32).
+
 **Tests**: Constitution III: test-first for every rule; one integration test class per backend feature area
 (Testcontainers PostgreSQL). Phase 0 rule ports are tested with Vitest using shared `test-vectors/`, which the xUnit
 tests reuse later.
@@ -85,6 +89,13 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 - [x] T031 Playwright smoke tests: add 5 wives → 5th refused; child under each wife; alternative claim flow; undo; JSON download → reset → open restores; reload keeps data; offline reload opens (service worker) in `web/tests/prototype.spec.ts`
 - [ ] T032 Deploy to GitHub Pages, run Lighthouse installability check on the deployed URL, and record the URL and feedback plan in `specs/001-family-tree-core/prototype-feedback.md`
 
+### Phase 0 revisions (2026-10-24)
+
+- [x] T122 [US1] Remove religious-rule and date checks from the browser rules (`web/src/domain/rules.ts`, `messages.ts`, `commands.ts`); keep integrity checks; update `test-vectors/rules.json` and the desktop test (5th wife accepted)
+- [ ] T123 [US3] Diamond person node with connectors top = parents, left/right = siblings, bottom = children in `web/src/features/editor/nodes.tsx`
+- [ ] T124 [US3] Drag from a connector to a person to create parent / sibling / child links (marriage picker, "other parent unknown") in `web/src/features/editor/FamilyCanvas.tsx` and `web/src/data/commands.ts`
+- [ ] T125 [US3] Free arrangement (positions kept in the tree data, rings follow spouses, Auto-arrange) and re-shifting (Move here / Add as alternative) with Playwright coverage in `web/tests/desktop.spec.ts`
+
 **Checkpoint (STOP)**: Collect feedback. Update spec.md/plan.md with what changed before starting Phase 1.
 
 ---
@@ -113,7 +124,7 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 ### Persistence
 
 - [ ] T044 Implement `AppDbContext` (Identity `AppUser`, soft-delete filters) and EF configurations (snake_case, PartialDate groups, composite keys/FKs, xmin, enums, jsonb) in `backend/src/Bayrab.Api/Infrastructure/Persistence/`
-- [ ] T045 Create migration `Init`, hand-edited per data-model.md (extensions, generated columns, exclusion constraint excluding Disputed, placeholder and preferred-claim partial unique indexes, citation single-target CHECK, oral-account CHECK, branch single-root CHECK, trigram index, `(tree_id, public_id)` unique, deferred `trg_verified_has_citation`) in `backend/src/Bayrab.Api/Infrastructure/Persistence/Migrations/`
+- [ ] T045 Create migration `Init`, hand-edited per data-model.md (extensions, generated columns, placeholder and preferred-claim partial unique indexes, citation single-target CHECK, oral-account CHECK, branch single-root CHECK, trigram index, `(tree_id, public_id)` unique) in `backend/src/Bayrab.Api/Infrastructure/Persistence/Migrations/`
 - [ ] T046 Implement `AuditInterceptor` (correlation id from header or ambient import scope) and `SearchTextInterceptor` in `backend/src/Bayrab.Api/Infrastructure/Persistence/Interceptors/`
 - [ ] T047 Implement `PersonIdAllocator` (row lock + counter) in `backend/src/Bayrab.Api/Infrastructure/Persistence/PersonIdAllocator.cs`
 - [ ] T048 [P] Implement `IFileStore` + `LocalDiskFileStore` (25 MB, type allow-list) in `backend/src/Bayrab.Api/Infrastructure/Files/`
@@ -151,16 +162,16 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 
 ### Tests (first)
 
-- [ ] T062 [P] [US1] Unit tests on `test-vectors/rules/*.json` plus extra cases: concurrency sweep, `FIFTH_WIFE_DURING_IDDAH`, `DISPUTED_EXCEEDS_LIMIT`, woman rules, iddah, `THIRD_DIVORCE` in `backend/tests/Bayrab.UnitTests/Domain/MarriagePolicyTests.cs`
-- [ ] T063 [P] [US1] Unit tests mahram (blood, marriage) and `FORBIDDEN_COMBINATION` in `backend/tests/Bayrab.UnitTests/Domain/KinshipServiceTests.cs`
-- [ ] T064 [P] [US1] Unit tests person rules (`DEATH_BEFORE_BIRTH`, gender immutable once married, `PERSON_HAS_LINKS`) in `backend/tests/Bayrab.UnitTests/Domain/PersonRulesTests.cs`
+- [ ] T062 [P] [US1] Unit tests on `test-vectors/rules.json` (five+ wives and overlapping husbands accepted; same-gender couple refused) in `backend/tests/Bayrab.UnitTests/Domain/MarriageChecksTests.cs`
+- [~] T063 [P] [US1] ~~Unit tests mahram and `FORBIDDEN_COMBINATION`~~ — dropped 2026-10-24 (R31)
+- [ ] T064 [P] [US1] Unit tests person checks (gender immutable once married, `PERSON_HAS_LINKS`; implausible dates accepted) in `backend/tests/Bayrab.UnitTests/Domain/PersonRulesTests.cs`
 - [ ] T065 [P] [US1] Integration tests People slices (public id allocation/no reuse, If-Match 412, delete/detach/restore, photo 200/413/415 + authorized download) in `backend/tests/Bayrab.IntegrationTests/PeopleTests.cs`
-- [ ] T066 [P] [US1] Integration tests Marriages slices (422/409/ack→201, defaults Unconfirmed/Low, Verified without citation → 422, concurrent 5th wife race, raw-SQL exclusion → 23P01, delete/restore, `ValidateMarriage` saves nothing) in `backend/tests/Bayrab.IntegrationTests/MarriagesTests.cs`
+- [ ] T066 [P] [US1] Integration tests Marriages slices (5th wife accepted, same-gender 422, defaults Not verified/Low, Verified without citation accepted, delete/restore, `ValidateMarriage` saves nothing) in `backend/tests/Bayrab.IntegrationTests/MarriagesTests.cs`
 
 ### Implementation
 
-- [ ] T067 [US1] Implement `MarriagePolicy`, `EvidencePolicy` in `backend/src/Bayrab.Api/Domain/{Marriages,Evidence}/`
-- [ ] T068 [US1] Implement `KinshipGraph`, `KinshipService` in `backend/src/Bayrab.Api/Domain/Kinship/` and `KinshipSubgraphQuery` in `backend/src/Bayrab.Api/Common/Queries/`
+- [ ] T067 [US1] Implement `MarriageChecks` (gender only) in `backend/src/Bayrab.Api/Domain/Marriages/`
+- [~] T068 [US1] ~~`KinshipService` / `KinshipSubgraphQuery` for mahram checks~~ — dropped 2026-10-24 (R31)
 - [ ] T069 [US1] Slices `CreatePerson`, `UpdatePerson`, `DeletePerson`, `RestorePerson`, `SetPersonPhoto`, `DeletePersonPhoto` in `backend/src/Bayrab.Api/Features/People/` and `DownloadFile` in `Features/Files/`
 - [ ] T070 [US1] Slices `CreateMarriage`, `UpdateMarriage`, `DeleteMarriage`, `RestoreMarriage`, `ValidateMarriage` in `backend/src/Bayrab.Api/Features/Marriages/`
 - [ ] T071 [US1] Regenerate `web/src/api/schema.d.ts`; implement person + marriage methods in `ApiStore`; map 422/409 to the existing `WarningDialog` in `web/src/data/ApiStore.ts`
@@ -171,10 +182,10 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 
 ## Phase 4: US2 — Children on a specific marriage (P1)
 
-- [ ] T072 [P] [US2] Unit tests `ParentagePolicy` (CHILD_HAS_PARENTS, DUPLICATE_PARENTAGE_CLAIM, ANCESTOR_CYCLE, CHILD_BORN_BEFORE_PARENT, PARENT_TOO_YOUNG, BIRTH_OUTSIDE_MARRIAGE_PERIOD) and `NasabFormatter` on `test-vectors/nasab.json` in `backend/tests/Bayrab.UnitTests/Domain/ParentageTests.cs`
-- [ ] T073 [P] [US2] Unit tests milk kinship mahram in `backend/tests/Bayrab.UnitTests/Domain/MilkKinshipTests.cs`
+- [ ] T072 [P] [US2] Unit tests `ParentagePolicy` (CHILD_HAS_PARENTS, DUPLICATE_PARENTAGE_CLAIM, ANCESTOR_CYCLE; implausible dates accepted) and `NasabFormatter` on `test-vectors/nasab.json` in `backend/tests/Bayrab.UnitTests/Domain/ParentageTests.cs`
+- [~] T073 [P] [US2] ~~Unit tests milk kinship mahram~~ — dropped 2026-10-24 (R31)
 - [ ] T074 [P] [US2] Integration tests Parentage slices (preferred create, placeholder reuse via `knownParentId` (U1), placeholder → normal, `ValidateParentage` saves nothing, delete/restore, cycle) and Kinship slices in `backend/tests/Bayrab.IntegrationTests/ParentageAndKinshipTests.cs`
-- [ ] T075 [US2] Implement `ParentagePolicy`, `NasabFormatter`, milk links in `KinshipService` in `backend/src/Bayrab.Api/Domain/` and `AncestryQueries` in `backend/src/Bayrab.Api/Common/Queries/`
+- [ ] T075 [US2] Implement `ParentageChecks`, `NasabFormatter` in `backend/src/Bayrab.Api/Domain/` and `AncestryQueries` in `backend/src/Bayrab.Api/Common/Queries/`
 - [ ] T076 [US2] Slices `CreateParentageClaim` (preferred + placeholder reuse), `UpdateParentageClaim`, `DeleteParentageClaim`, `RestoreParentageClaim`, `ValidateParentage`, `ListParentageClaims`, `SetPlaceholderSpouse` in `backend/src/Bayrab.Api/Features/Parentage/`
 - [ ] T077 [US2] Slices `CreateKinshipLink`, `UpdateKinshipLink`, `DeleteKinshipLink` in `backend/src/Bayrab.Api/Features/Kinship/` and `GetPersonDetail` in `Features/People/`
 - [ ] T078 [US2] Wire parentage, kinship and profile into `ApiStore`
@@ -183,9 +194,9 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 
 ## Phase 5: US6 — Sources, verification, competing claims (P1)
 
-- [ ] T079 [P] [US6] Unit tests `EvidencePolicy` (Verified needs citation on all three relationship types, last-citation removal, SOURCE_IN_USE, oral-account requirements) and competing claims (alternative → Disputed, prefer swap, delete preferred leaves none, cycle via alternative) in `backend/tests/Bayrab.UnitTests/Domain/EvidenceAndClaimsTests.cs`
-- [ ] T080 [P] [US6] Integration tests Sources slices (CRUD, oral validation, attach 200/413/415, detach, redaction-aware download, delete → SOURCE_IN_USE → ack → downgrade + audit) in `backend/tests/Bayrab.IntegrationTests/SourcesTests.cs`
-- [ ] T081 [P] [US6] Integration tests Citations slices (single target, person facts, last citation of Verified → 422, raw-SQL Verified without citation rejected by trigger) in `backend/tests/Bayrab.IntegrationTests/CitationsTests.cs`
+- [ ] T079 [P] [US6] Unit tests optional evidence (any status with or without citations; oral-account fields) and competing claims (alternative → Disputed, prefer swap, delete preferred leaves none, cycle via alternative) in `backend/tests/Bayrab.UnitTests/Domain/EvidenceAndClaimsTests.cs`
+- [ ] T080 [P] [US6] Integration tests Sources slices (CRUD, oral validation, attach 200/413/415, detach, redaction-aware download, delete removes citations, statuses unchanged, audit) in `backend/tests/Bayrab.IntegrationTests/SourcesTests.cs`
+- [ ] T081 [P] [US6] Integration tests Citations slices (single target, person facts, removing the last citation keeps the status) in `backend/tests/Bayrab.IntegrationTests/CitationsTests.cs`
 - [ ] T082 [P] [US6] Integration tests `PreferParentageClaim` (descendants' nasab updates) and `ListRelationships` filters + paging in `backend/tests/Bayrab.IntegrationTests/ClaimsAndResearchTests.cs`
 - [ ] T083 [US6] Slices `CreateSource`, `UpdateSource`, `DeleteSource`, `ListSources`, `GetSource`, `AttachSourceFile`, `DetachSourceFile` in `backend/src/Bayrab.Api/Features/Evidence/Sources/`
 - [ ] T084 [US6] Slices `CreateCitation`, `UpdateCitation`, `DeleteCitation`, `ListRelationships` in `backend/src/Bayrab.Api/Features/Evidence/`; alternative-claim support in `CreateParentageClaim` + `PreferParentageClaim` in `Features/Parentage/`

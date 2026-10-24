@@ -6,7 +6,7 @@ export const STATUS_STYLE: Record<VerificationStatus, { color: string; dash?: st
   Verified: { color: 'var(--status-verified)', icon: '✓' },
   OralAccount: { color: 'var(--status-oral)', dash: '10 5', icon: '🗣' },
   Disputed: { color: 'var(--status-disputed)', dash: '2 4', icon: '⚡' },
-  Unconfirmed: { color: 'var(--status-unconfirmed)', dash: '5 5', icon: '?' },
+  Unconfirmed: { color: 'var(--status-unconfirmed)', icon: '·' },
 }
 
 export const CONFIDENCE_WIDTH: Record<Confidence, number> = { High: 2.5, Medium: 1.75, Low: 1.1 }

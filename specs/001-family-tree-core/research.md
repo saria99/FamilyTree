@@ -18,7 +18,7 @@ Each item: Decision / Rationale / Alternatives considered.
   marriages, marriage dates, or ordering of wives; rejected. Generic edge table (`from, to, type`) → loses
   structure, pushes all rules into code, hard to constrain in SQL; rejected.
 
-## R2. Enforcing "one husband at a time" and "max four concurrent wives"
+## R2. Enforcing "one husband at a time" and "max four concurrent wives" — **withdrawn 2026-10-24, see R31**
 
 - **Decision**:
   - Store marriage dates as partial dates (value + precision: Day/Month/Year/Unknown). Derive a
@@ -41,7 +41,7 @@ Each item: Decision / Rationale / Alternatives considered.
 - **Alternatives**: Trigger counting wives → harder to test and to return structured errors; kept as an
   option if the row lock proves insufficient. Serializable isolation for everything → more retries, no benefit.
 
-## R3. Hard rules vs. confirmable warnings
+## R3. Hard rules vs. confirmable warnings — **withdrawn 2026-10-24, see R31**
 
 - **Decision**: Two classes of rule results:
   - **Violations** (always refused, HTTP 422): `MAX_CONCURRENT_WIVES`, `WIFE_HAS_HUSBAND`, `SAME_GENDER_MARRIAGE`,
@@ -55,7 +55,7 @@ Each item: Decision / Rationale / Alternatives considered.
 - **Rationale**: Clarification session 2026-10-06 and constitution v1.1.0 — historical record, flexible.
 - **Alternatives**: Everything as warnings → loses the structural guarantees the user asked for; rejected.
 
-## R4. Mahram detection
+## R4. Mahram detection — **withdrawn 2026-10-24, see R31**
 
 - **Decision**: A pure C# `KinshipService` in the shared `Domain/` kernel. For a proposed couple (H, W), the calling
   slice loads the **relevant subgraph** (via the shared `KinshipSubgraphQuery`) with a recursive CTE: ancestors of H and W (up to 6 generations) plus their
@@ -78,7 +78,7 @@ Each item: Decision / Rationale / Alternatives considered.
 - **Rationale**: Bounds make every rule computable with ranges; original form is preserved for display (FR-001).
 - **Alternatives**: Store strings → no range logic; store only Gregorian → loses what the admin typed.
 
-## R6. Iddah calculation (warning only)
+## R6. Iddah calculation (warning only) — **withdrawn 2026-10-24, see R31**
 
 - **Decision**: Divorce: 3 months (approximation of 3 menstrual cycles) — configurable per tree. Death of husband:
   4 months 10 days. Pregnancy at time of ending is not tracked; a child born to that marriage after the end date
@@ -199,7 +199,7 @@ Each item: Decision / Rationale / Alternatives considered.
 - **Alternatives**: Keep `parent_marriage_id` plus a side table of alternatives → two sources of truth; rejected.
   A generic assertion/evidence model (GEDCOM-X style) → far more complex than needed; rejected (Principle VII).
 
-## R18. Verification status, confidence and "Verified needs a source"
+## R18. Verification status, confidence and "Verified needs a source" — **withdrawn 2026-10-24, see R31**
 
 - **Decision**: `verification_status` (Verified, OralAccount, Disputed, Unconfirmed) and `confidence` (High, Medium,
   Low) columns on `marriage`, `parentage_claim` and `kinship_link`; default Unconfirmed / Low. The domain refuses
@@ -366,3 +366,28 @@ Each item: Decision / Rationale / Alternatives considered.
   Vite's dev server proxies `/api` to `http://localhost:5080`. One Docker image contains both.
 - **Rationale**: Same-origin cookies for refresh tokens (R8), no CORS in production, one deployable (Principle VII).
 - **Alternatives**: Separate static hosting + CORS → cross-site cookies break in iOS PWAs; rejected.
+
+## R31. Religious-rule governance removed (2026-10-24)
+
+- **Decision**: The platform records history as given. R2 (four-wife limit, one-husband exclusion constraint), R3
+  (warnings and acknowledgements), R4 (mahram detection), R6 (iddah) and R18 (Verified needs a source, DB trigger) are
+  withdrawn. What remains enforced (domain + DB): husband Male / wife Female, one preferred parentage (partial unique
+  index), no duplicate claim, no ancestor cycles (all claims), no cross-tree links. Statuses, confidence, sources and
+  citations stay as optional labels; the default status ("Not verified") draws as a plain line.
+- **Consequences**: no `KinshipService`, `MarriagePolicy` concurrency sweep, `rule_acknowledgement` writes or 409
+  warning flow are needed for marriages; `certain_period` is kept only for display/sorting. The warning infrastructure
+  stays generic in case a future warning is wanted.
+- **Rationale**: Clarification 2026-10-24 — "remove the governance over Islamic rules; we just want to give historical
+  information, taken by default without verification."
+
+## R32. Diamond person nodes and drag-to-relate (2026-10-24)
+
+- **Decision**: Person nodes are diamonds with four React Flow handles: top = parents, left/right = siblings, bottom =
+  children. Dragging from a handle and releasing over a person creates the relationship (the editor resolves the drop
+  target from the pointer position, so the target need not be a handle). Parent/child links ask which marriage of the
+  parent to use (or "other parent unknown" → the parent's placeholder marriage). A sibling link copies the source's
+  preferred parent marriage to the target (or the reverse if only the target has parents).
+- **Arranging**: dropping a person on empty canvas keeps the position (`positions` map in the tree data; later a
+  `person_layout` table per tree); marriage rings follow their spouses; "Auto-arrange" clears manual positions.
+- **Re-shifting**: dropping a child (or connecting from a child's top handle) onto other parents offers **Move here**
+  (the preferred claim's marriage changes; history keeps the old value) or **Add as alternative claim**.

@@ -11,13 +11,15 @@ unconfirmed relationships, so the data stays reliable and no lineage is assumed 
 
 ## Islamic family structure
 
-- A man may have up to **four wives at the same time**; each marriage is its own record with dates and how it ended.
-- A woman has **one husband at a time** and may remarry **in sequence** after divorce or widowhood.
+- A man may be recorded with **several wives at the same time**; each marriage is its own record with dates and how it ended.
+- A woman may be recorded with **several husbands in sequence** (after divorce or widowhood).
 - Every child is tied to a specific marriage (father **and** mother), so half-siblings through different wives or
   husbands stay distinct. Lineage (nasab) follows the father; maternal lines are equally browsable.
 - Guardianship (kafala) and milk kinship are recorded but never change lineage.
-- The platform is a historical record: structural rules are enforced, while judgment rules (mahram, iddah, third
-  divorce, implausible dates) raise warnings an admin confirms.
+- The platform is a **historical record**: information is accepted as entered, by default without verification. It
+  does not enforce or warn about religious rules or dates; it only prevents things that would break the tree (a person
+  becoming their own ancestor, the same child added twice to the same parents).
+- People are drawn as **diamonds**: the top connector links to parents, the sides to siblings, the bottom to children.
 
 ## Core capabilities
 
@@ -27,8 +29,8 @@ unconfirmed relationships, so the data stays reliable and no lineage is assumed 
 - **Genealogy records**: parents, children, spouses, maternal lineage, and extended family relationships, each person
   with a unique permanent identifier (e.g. `BYR-000123`).
 - **Evidence and verification**: sources (documents, books, official records, gravestones, photos, websites, oral
-  accounts) with attachments and citations. Every relationship has a status (Verified, Oral account, Disputed,
-  Unconfirmed) and a confidence level (High, Medium, Low). When sources disagree, competing claims are kept with one
+  accounts) with attachments and citations. Relationships can optionally carry a status (Verified, Oral account,
+  Disputed, Not verified — the default) and a confidence level (High, Medium, Low). When sources disagree, competing claims are kept with one
   marked preferred.
 - **Family branches**: named branches rooted at an ancestor or a specific marriage, for browsing, filtering, printing,
   and export.

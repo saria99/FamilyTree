@@ -138,18 +138,18 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
       let outcome: RuleOutcome
       if (marriageId) {
         const hasPreferred = !!g.preferredClaim(draggedId)
-        outcome = checkParentage(data, { childId: draggedId, marriageId, preferred: !hasPreferred, status: hasPreferred ? 'Disputed' : 'Unconfirmed' }, lang)
+        outcome = checkParentage(data, { childId: draggedId, marriageId, preferred: !hasPreferred, status: hasPreferred ? 'Disputed' : 'Unconfirmed' })
         const verdict: DropVerdict = violations(outcome).length ? 'bad' : outcome.results.length || hasPreferred ? 'warn' : 'ok'
         return { draggedId, targetId, verdict, outcome }
       }
       const target = g.person(targetId)
       if (!target) return null
       const [husbandId, wifeId] = dragged.gender === 'M' ? [dragged.id, target.id] : [target.id, dragged.id]
-      outcome = checkMarriage(data, { husbandId, wifeId, endReason: 'Ongoing', status: 'Unconfirmed', confidence: 'Low' }, lang)
+      outcome = checkMarriage(data, { husbandId, wifeId, endReason: 'Ongoing', status: 'Unconfirmed', confidence: 'Low' })
       const verdict: DropVerdict = violations(outcome).length ? 'bad' : outcome.results.length ? 'warn' : 'ok'
       return { draggedId, targetId, verdict, outcome }
     },
-    [g, data, lang],
+    [g, data],
   )
 
   const findTarget = useCallback(

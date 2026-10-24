@@ -15,10 +15,11 @@ npm run build; npm run preview    # production build with the service worker (to
 
 The prototype is published to GitHub Pages by `.github/workflows/pages.yml` on every push to `main`.
 
-- **Save / share**: Settings → "Download tree (JSON)"; "Open JSON file" loads one; "Reset demo" restores the sample family.
+- **Data**: the app starts from the Bayrab seed (`web/src/data/seed/bayrab-records.json`). Settings → "Download tree (JSON)",
+  "Open JSON file", "Reset to Bayrab seed", "Load demo family (fictional)" (or open `?seed=demo`).
 - **Phone**: open the Pages URL → Android: "Install app"; iOS Safari: Share → Add to Home Screen.
-- Try steps 2–10 and 12–15 below; the prototype runs the structural rules and iddah warnings in the browser
-  (mahram checks, PDFs, Excel and sharing arrive with the backend).
+- Try steps 2–10 and 12–15 below with the demo family; the prototype runs the integrity checks in the browser
+  (PDFs, Excel and sharing arrive with the backend). No religious-rule or date checks exist (2026-10-24).
 
 ## Prerequisites (full stack)
 
@@ -63,31 +64,32 @@ serves the PWA on one origin). Install it to the home screen; open a tree once, 
 
 1. Register, create tree "Test Family" with ID prefix `TST` — you are Owner. New people get `TST-000001`, `TST-000002`, …
 2. Type "Abdullah" ⏎ (male). Type "Aminah", "Khadijah", "Sawdah", "Zaynab", "Hafsah" ⏎ (female).
-3. Drag each of the first four women onto Abdullah, start dates 2000, 2002, 2004, 2006 → 4 union nodes appear.
-4. Drag Hafsah onto Abdullah with start 2008 → **refused**: "A man may not have more than four wives at the same time."
-5. Edit the Aminah marriage: end 2007-03-01, reason Divorce (revocable). Retry Hafsah with start 2007-04-01 → **warning**
-   FIFTH_WIFE_DURING_IDDAH (Aminah's iddah runs to ~2007-05-30) → cancel. Retry with start 2008 → **saved** without warning.
-6. Type "Yusuf" (male), drag Aminah onto Yusuf with start 2007-06 → **warning** IDDAH_OVERLAP → confirm → saved, flag shown.
-7. Drag Yusuf onto Aminah again with start 2010 while 2007 marriage ongoing → refused (she already has a husband).
-8. Add two children under the Abdullah–Khadijah union and one under Abdullah–Sawdah → children sit under different unions.
+3. Drag each of the five women onto Abdullah, start dates 2000–2008 → 5 marriage rings appear, **no warnings**.
+4. Drag Abdullah onto a man → refused: "A marriage is recorded as a husband and a wife."
+5. Type "Yusuf" (male), drag Aminah onto Yusuf → saved as recorded (no overlap or iddah checks).
+6. Hover a person: the diamond shows four connectors. Drag from **Khadijah's bottom** connector to a new person "Ali" →
+   choose the marriage with Abdullah → Ali becomes their child.
+7. Drag from **Ali's side** connector to a new person "Zaynab" → Zaynab becomes Ali's sibling (same parents).
+8. Drag from a new person's **top** connector to Sawdah → choose "with Abdullah" → child of Abdullah and Sawdah.
+   Drag Ali to an empty spot → he stays there; **Auto-arrange** restores the layout.
 9. Quick entry: `Ali ibn Abdullah ibn Hashim` → choose existing "Abdullah", new "Ali" and "Hashim" → chain created.
 10. Press Ctrl+Z three times → last three actions undone; Ctrl+Y redoes.
 11. Settings → Visibility: Public. Open the tree in a private browser window → living people show "Living person".
 
 ### Evidence, claims, branches, outputs
 
-12. Select the Abdullah–Khadijah marriage and set status **Verified** → **refused** (VERIFIED_REQUIRES_SOURCE: no citation yet).
+12. Select the Abdullah–Khadijah marriage and set status **Verified** → saved (no source needed; statuses are optional labels).
 13. Sources → New: type Oral account, narrator "Umm Ali", told 1440 AH, recorded by you. Cite it on that marriage and set
     status **Oral account**, confidence Medium → the edge turns long-dashed with an "Oral" badge.
-14. Drag one of Khadijah's children onto the Abdullah–Sawdah union → dialog "Already has preferred parents — add as
-    alternative claim?" → yes → both claims Disputed; the alternative shows as a red dotted edge. Make the alternative
-    preferred → the child moves under Sawdah; history shows one change.
+14. Drag one of Khadijah's children onto the Abdullah–Sawdah ring → choose **Move here** → the child now sits under
+    Sawdah. Do it again with another child and choose **Add as alternative claim** → a red dotted edge appears; the child
+    stays with Khadijah until the alternative is made preferred.
 15. Branches → New "Through Khadijah" rooted at the Abdullah–Khadijah marriage → filter canvas → only her descendants.
 16. Export → PDF → Descendant chart, branch "Through Khadijah", Arabic, A3 → download within seconds; check the RTL text,
     the status legend and the line styles.
 17. Export → Excel → open the file → sheets People/Marriages/Parentage/Kinship/Sources/Citations with `TST-…` IDs and statuses.
     Edit two names, add one child row, re-import → preview shows 2 Update + 1 New → Commit → history shows one import operation.
-18. Research queue → filter "No source" → lists every Unconfirmed relationship.
+18. Research queue → filter "No source" → lists relationships without sources (informational only).
 
 ## 6. Verify on a phone (installed PWA)
 

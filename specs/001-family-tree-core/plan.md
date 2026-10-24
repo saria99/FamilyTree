@@ -49,14 +49,14 @@ No open NEEDS CLARIFICATION items. Decisions: [research.md](research.md) R1–R3
 
 | Principle | Gate | Result |
 |---|---|---|
-| I. Islamic family law is the domain model | ≤4 concurrent wives; 1 husband at a time; one preferred parentage; Disputed excluded from hard limits; judgment rules = warnings | PASS — `Domain/` kernel policies; DB exclusion constraint; partial unique preferred index. Phase 0 mirrors the structural rules in TypeScript |
-| II. Server-enforced, client-mirrored | Domain + DB constraints | PASS for the product. **Phase 0 exception**: rules run only in the browser (see Complexity Tracking) |
-| III. Test-first; every endpoint integration-tested | | PASS — one integration test class per feature area; unit tests for every rule code; Phase 0 rule ports have Vitest tests |
+| I. Islamic family structure | Several concurrent wives, sequential husbands, child ↔ one preferred marriage; no religious-rule enforcement or warnings | PASS — union + parentage-claim model; no limit constraints (R31) |
+| II. Data integrity on the server | Same-gender couple, one preferred parentage, duplicate claim, cycles, cross-tree | PASS — `Domain/` checks + partial unique index + composite FKs. **Phase 0 exception**: checks run only in the browser |
+| III. Test-first for integrity checks and endpoints | Accepted + refused case per check; religious-rule cases shown as accepted | PASS — `test-vectors/rules.json`; one integration class per feature area |
 | IV. Visual, forgiving editing | Gestures = commands; drops explained; undo | PASS — Phase 0 builds exactly this experience first |
 | V. One API, one installable web client | Generated types; PWA installable; offline last tree | PASS — vite-plugin-pwa (R29); OpenAPI → `web/src/api` (R12) |
 | VI. Privacy & roles | Redaction everywhere; audit | PASS — Redactor in Phase 2 before anonymous access. **Phase 0 holds historical (deceased) people and fictional demo data only** |
 | VII. Simplicity | One DB, one backend project, one client | PASS — single `Bayrab.Api` project, single `web/` app, no shared npm package |
-| VIII. Evidence before assumption | Status + confidence on every relationship; Verified needs source | PASS — data model + `EvidencePolicy`; Phase 0 shows statuses, legend and the Verified-needs-source rule |
+| VIII. Optional evidence | Optional status/confidence/sources; no inference | PASS — labels optional, default "Not verified" drawn plain; no verification gate |
 | IX. Stable identity & portability | Permanent IDs; lossless exports; preview imports | PASS — `public_id`; import_batch; Phase 0 JSON file uses the same ids |
 
 ## Project Structure
@@ -144,13 +144,13 @@ rewriting the UI.
 
 ## Key design notes
 
-1. **Marriage creation** (FR-004–FR-009, FR-044): `Features/Marriages/CreateMarriage.cs` → transaction →
-   `SELECT … FOR UPDATE` on both spouses → `KinshipSubgraphQuery` → `MarriagePolicy` + `KinshipService` → 422 / 409 /
-   insert + acknowledgements. Exclusion-constraint race → 422 `WIFE_HAS_HUSBAND`.
-2. **Parentage** (FR-010, FR-031, FR-045): `CreateParentageClaim` with `asPreferred`; second preferred → 422
+1. **Marriage creation** (FR-003, FR-004, FR-008): `Features/Marriages/CreateMarriage.cs` → gender check → insert.
+   No limits, overlap, mahram or iddah checks (R31).
+2. **Parentage** (FR-010, FR-031): `CreateParentageClaim` with `asPreferred`; second preferred → 422
    `CHILD_HAS_PARENTS` (UI offers "add as alternative"). Cycle check walks all claims; lineage follows preferred claims.
-3. **Evidence** (FR-028–FR-034): `EvidencePolicy` + deferred DB trigger; `DeleteSource` → `SOURCE_IN_USE` → downgrade.
-4. **Editor drop flow**: drag-over → Phase 0: local rule check; later `/validate/*` → green/amber/red → dialog or reason.
+3. **Evidence** (FR-028–FR-034): optional labels and citations; no verification gate, no trigger (R31).
+4. **Editor**: diamond person nodes with parent/sibling/child connectors, free arrangement, Move here / alternative (R32).
+   Drag-over → local integrity check (later `/validate/*`) → green/red → dialog or reason.
 5. **Status rendering**: `StatusEdge` from `web/src/shared/status/styles.ts`; `StatusPdfStyles` mirrors it (test vector).
 6. **Redaction first** (C1): `Common/Redactor` in Phase 2; anonymous access denied until then.
 7. **PWA** (R29): shell precache; per-user IndexedDB query cache; photo runtime cache; cleared on logout.
