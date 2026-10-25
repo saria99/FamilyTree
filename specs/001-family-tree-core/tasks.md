@@ -104,12 +104,24 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 
 ## Phase 1: Backend Setup
 
-- [ ] T033 Create `backend/Bayrab.sln` with `backend/src/Bayrab.Api` (ASP.NET Core minimal API), `backend/tests/Bayrab.UnitTests`, `backend/tests/Bayrab.IntegrationTests` (xunit)
-- [ ] T034 Add `backend/Directory.Build.props` (net10.0, nullable, TreatWarningsAsErrors) and `backend/Directory.Packages.props` (Npgsql.EntityFrameworkCore.PostgreSQL 10.x, Microsoft.EntityFrameworkCore.Design, Identity.EntityFrameworkCore, JwtBearer, Microsoft.AspNetCore.OpenApi, QuestPDF, ClosedXML, CsvHelper; tests: xunit, Shouldly, Testcontainers.PostgreSql, Microsoft.AspNetCore.Mvc.Testing, NetArchTest.Rules, UglyToad.PdfPig)
-- [ ] T035 [P] Add `backend/.config/dotnet-tools.json` (`dotnet-ef`) and `docker-compose.yml` (postgres:17, volume, healthcheck)
-- [ ] T036 [P] Create folders `Features/`, `Domain/`, `Infrastructure/`, `Common/` in `backend/src/Bayrab.Api/` and the `IEndpoint` interface + assembly scan registration in `backend/src/Bayrab.Api/Common/Endpoints/`
-- [ ] T037 [P] Architecture tests: slices don't reference other slices' namespaces; `Domain` doesn't reference `Features`, `Infrastructure`, EF Core, or ASP.NET in `backend/tests/Bayrab.UnitTests/ArchitectureTests.cs`
-- [ ] T038 [P] Extend `.github/workflows/ci.yml`: job `backend` (`dotnet test backend`), job `web` (`npm ci`, lint, Vitest, build, Lighthouse CI)
+- [x] T033 Create `backend/Bayrab.sln` with `backend/src/Bayrab.Api` (ASP.NET Core minimal API), `backend/tests/Bayrab.UnitTests`, `backend/tests/Bayrab.IntegrationTests` (xunit)
+- [x] T034 Add `backend/Directory.Build.props` (net10.0, nullable, TreatWarningsAsErrors) and `backend/Directory.Packages.props` (Npgsql.EntityFrameworkCore.PostgreSQL 10.x, Microsoft.EntityFrameworkCore.Design, Identity.EntityFrameworkCore, JwtBearer, Microsoft.AspNetCore.OpenApi, QuestPDF, ClosedXML, CsvHelper; tests: xunit, Shouldly, Testcontainers.PostgreSql, Microsoft.AspNetCore.Mvc.Testing, NetArchTest.Rules, UglyToad.PdfPig)
+- [x] T035 [P] Add `backend/.config/dotnet-tools.json` (`dotnet-ef`) and `docker-compose.yml` (postgres:17, volume, healthcheck)
+- [x] T036 [P] Create folders `Features/`, `Domain/`, `Infrastructure/`, `Common/` in `backend/src/Bayrab.Api/` and the `IEndpoint` interface + assembly scan registration in `backend/src/Bayrab.Api/Common/Endpoints/`
+- [x] T037 [P] Architecture tests: slices don't reference other slices' namespaces; `Domain` doesn't reference `Features`, `Infrastructure`, EF Core, or ASP.NET in `backend/tests/Bayrab.UnitTests/ArchitectureTests.cs`
+- [x] T038 [P] Extend `.github/workflows/ci.yml`: job `backend` (`dotnet test backend`), job `web` (`npm ci`, lint, Vitest, build, Lighthouse CI) — *Lighthouse step dropped: Lighthouse 12 removed the PWA audits; installability is covered by Playwright in T095*
+
+### Phase 1 notes (2026-10-25)
+
+- `backend/global.json` pins SDK 10.0.402 and opts in to Microsoft.Testing.Platform (xUnit v3): run `dotnet test --solution Bayrab.sln` from `backend/`.
+- `Features/Health/GetHealth.cs` is the first slice (proves the `IEndpoint` scan); `HealthTests` is a host smoke test without a database.
+
+**Plan agreed for Phases 2–7 (web ↔ API):**
+- `ApiStore` keeps the same snapshot/commit/undo shape as `LocalStore`. Existing pure commands (`web/src/data/commands.ts`) still produce the next `TreeData`; `ApiStore` diffs before/after and sends the matching slice calls under one `X-Correlation-Id`. Undo/redo = the same diff in reverse, using `restore` endpoints for soft-deleted rows (T089).
+- Create requests accept an optional client-generated `id` (uuid) so the editor can select what it just created; the server still allocates `publicId`.
+- Additions to the contract: `GET /trees/{treeId}/snapshot` (full editor payload, redacted), `PUT /trees/{treeId}/positions` (manual canvas positions, jsonb on `family_tree`), `PUT /trees/{treeId}/me/linked-person` ("Set as me", T094); `UpdateParentageClaim` may change `marriageId` (Move here) and `UpdateMarriage` may fill a placeholder spouse.
+- Merge goes through `MergePersons`; offline cache = TanStack Query + IndexedDB persister keyed per user.
+- Docker Desktop must be running for Testcontainers (Phase 2 fixture onwards).
 
 ---
 

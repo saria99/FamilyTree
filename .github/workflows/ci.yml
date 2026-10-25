@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, '0*-*']
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # Integration tests start postgres:17 through Testcontainers (Docker is available on ubuntu-latest).
+      - run: dotnet test --solution Bayrab.sln
+        working-directory: backend
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      # Lighthouse 12 dropped its PWA audits, so installability is checked by Playwright (web/tests/pwa.spec.ts, T095).
