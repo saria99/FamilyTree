@@ -146,7 +146,7 @@ test('a person dropped on empty space stays there; Auto-arrange restores the lay
 })
 
 /** Hover a person and click one of the "+" buttons around the diamond. */
-async function plus(page: Page, name: string, label: 'Add parent' | 'Add sibling' | 'Add child') {
+async function plus(page: Page, name: string, label: 'Add parent' | 'Add sibling' | 'Add child' | 'Add wife' | 'Add husband') {
   await fit(page)
   await node(page, name).hover()
   await node(page, name).getByRole('button', { name: label }).first().click()
@@ -196,4 +196,47 @@ test('"+ Add sibling" gives the new person the same parents', async ({ page }) =
   const data = await stored(page)
   const sib = data.persons.find((p) => p.ismEn === 'Yahya')!
   expect(data.claims.find((c) => c.childId === sib.id)?.marriageId).toBe('m2')
+})
+
+interface StoredMarriage {
+  id: string
+  husbandId: string | null
+  wifeId: string | null
+}
+
+test('"+ Add child" can record a new wife as the mother in the same step', async ({ page }) => {
+  await plus(page, 'Yusuf', 'Add child')
+  const dialog = page.getByRole('dialog', { name: 'Add a child of Yusuf' })
+  // Yusuf has no marriage yet, so the mother defaults to "New wife…".
+  await expect(dialog.getByLabel('Mother')).toHaveValue('__new')
+  await dialog.getByLabel('Name (English)', { exact: true }).fill('Musa')
+  await expect(dialog.getByRole('button', { name: 'Add' })).toBeDisabled()
+  await dialog.getByLabel('Wife’s name (English)').fill('Hafsah')
+  await page.screenshot({ path: 'test-results/desktop-add-child-new-wife.png' })
+  await dialog.getByRole('button', { name: 'Add' }).click()
+
+  const data = (await page.evaluate(() => JSON.parse(localStorage.getItem('bayrab-prototype-v2')!))) as Stored & { marriages: StoredMarriage[] }
+  const id = (n: string) => data.persons.find((p) => p.ismEn === n)!.id
+  const marriage = data.marriages.find((m) => m.wifeId === id('Hafsah'))!
+  expect(marriage.husbandId).toBe('p7')
+  expect(data.claims.find((c) => c.childId === id('Musa'))).toMatchObject({ marriageId: marriage.id, preferred: true })
+
+  // One undo removes the child, the wife and the marriage together.
+  await page.getByRole('button', { name: /Undo/ }).click()
+  await expect(node(page, 'Hafsah')).toHaveCount(0)
+  await expect(node(page, 'Musa')).toHaveCount(0)
+})
+
+test('"+ Add wife" on the diamond marries a new wife to the person', async ({ page }) => {
+  await plus(page, 'Yusuf', 'Add wife')
+  const dialog = page.getByRole('dialog', { name: 'Add a wife of Yusuf' })
+  await dialog.getByLabel('Name (English)').fill('Asma')
+  await dialog.getByRole('button', { name: 'Add' }).click()
+  await expect(node(page, 'Asma')).toBeVisible()
+  const data = (await page.evaluate(() => JSON.parse(localStorage.getItem('bayrab-prototype-v2')!))) as Stored & { marriages: StoredMarriage[] }
+  const asma = data.persons.find((p) => p.ismEn === 'Asma')!
+  expect(data.marriages.find((m) => m.wifeId === asma.id)?.husbandId).toBe('p7')
+  // The side panel offers the same action.
+  await node(page, 'Yusuf').click()
+  await expect(page.locator('.side-panel').getByRole('button', { name: '+ Add wife' })).toBeVisible()
 })

@@ -211,20 +211,39 @@ export function clearPositions(data: TreeData): CommandResult {
   return { ok: true, data: { ...data, positions: undefined } }
 }
 
-export type RelativeKind = 'parent' | 'sibling' | 'child'
+export type RelativeKind = 'parent' | 'sibling' | 'child' | 'spouse'
 
 export interface NewRelative extends NewPerson {
   birth?: Person['birth']
   death?: Person['death']
   /** For a child: one of the anchor's marriages, or undefined for "other parent unknown". */
   marriageId?: string
+  /** For a child: a new wife (or husband) of the anchor, married to the anchor in the same step. Wins over `marriageId`. */
+  otherParent?: Omit<NewPerson, 'gender'>
+}
+
+/** Create a person with optional birth/death years. */
+function createPerson(data: TreeData, input: NewPerson & { birth?: Person['birth']; death?: Person['death'] }): { data: TreeData; id: string } {
+  const created = addPerson(data, input) as { ok: true; data: TreeData; createdId: string }
+  const id = created.createdId
+  const persons = created.data.persons.map((p) => (p.id === id ? { ...p, birth: input.birth, death: input.death, isLiving: !input.death?.y } : p))
+  return { data: { ...created.data, persons }, id }
+}
+
+/** A new marriage between the anchor and a new spouse (opposite gender). Defaults match the marriage dialog. */
+function marryNew(data: TreeData, anchor: Person, spouse: NewPerson & { birth?: Person['birth']; death?: Person['death'] }) {
+  const created = createPerson(data, { ...spouse, gender: anchor.gender === 'M' ? 'F' : 'M' })
+  const [husbandId, wifeId] = anchor.gender === 'M' ? [anchor.id, created.id] : [created.id, anchor.id]
+  const married = saveMarriage(created.data, { husbandId, wifeId, endReason: 'Ongoing', status: 'Unconfirmed', confidence: 'Low' }, [])
+  return married.ok ? { ok: true as const, data: married.data, spouseId: created.id, marriageId: married.createdId! } : married
 }
 
 /**
  * "+" on a diamond point: create a person and link them to `anchorId` in one undo step.
  * - parent: fills the empty slot of the anchor's parent marriage, or starts a "other parent unknown" marriage;
  * - sibling: same preferred parents as the anchor;
- * - child: child of the chosen marriage of the anchor (or the anchor's "other parent unknown" marriage).
+ * - child: child of the chosen marriage of the anchor, of a new wife/husband, or of the "other parent unknown" marriage;
+ * - spouse: a new wife (or husband) married to the anchor.
  */
 export function addRelative(data: TreeData, anchorId: string, kind: RelativeKind, input: NewRelative): CommandResult {
   const anchor = data.persons.find((p) => p.id === anchorId)
@@ -232,20 +251,30 @@ export function addRelative(data: TreeData, anchorId: string, kind: RelativeKind
   const anchorClaim = data.claims.find((c) => c.childId === anchorId && c.preferred)
   if (kind === 'sibling' && !anchorClaim) return blocked('SIBLING_NEEDS_PARENT', [anchorId])
 
-  const created = addPerson(data, input)
-  if (!created.ok) return created
-  const personId = created.createdId!
-  let next: TreeData = {
-    ...created.data,
-    persons: created.data.persons.map((p) => (p.id === personId ? { ...p, birth: input.birth, death: input.death, isLiving: !input.death?.y } : p)),
+  if (kind === 'spouse') {
+    const r = marryNew(data, anchor, input)
+    return r.ok ? { ok: true, data: r.data, createdId: r.spouseId } : r
   }
+
+  let next = data
+  let otherParentMarriage: string | undefined
+  if (kind === 'child' && input.otherParent) {
+    const r = marryNew(next, anchor, { gender: anchor.gender, ...input.otherParent })
+    if (!r.ok) return r
+    next = r.data
+    otherParentMarriage = r.marriageId
+  }
+
+  const created = createPerson(next, input)
+  const personId = created.id
+  next = created.data
   const link = (childId: string, marriageId: string) => addClaim(next, { childId, marriageId, preferred: true, status: 'Unconfirmed', confidence: 'Low' }, [])
 
   let result: CommandResult
   if (kind === 'sibling') {
     result = link(personId, anchorClaim!.marriageId)
   } else if (kind === 'child') {
-    const marriageId = input.marriageId ?? (() => {
+    const marriageId = otherParentMarriage ?? input.marriageId ?? (() => {
       const r = ensurePlaceholder(next, anchorId, anchor.gender)
       next = r.data
       return r.marriageId

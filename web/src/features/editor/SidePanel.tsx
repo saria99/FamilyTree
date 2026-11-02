@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang } from '../../app/i18n'
 import { useGraph, useStoreApi, useTreeData } from '../../app/store'
@@ -6,6 +7,7 @@ import { citationCount } from '../../domain/rules'
 import { personName } from '../../domain/text'
 import { VerificationFields } from '../../shared/fields'
 import { StatusBadge } from '../../shared/status'
+import { AddRelativeDialog } from './AddRelativeDialog'
 import { Citations } from './Citations'
 import { MarriageEditor, PersonForm } from './forms'
 
@@ -14,6 +16,7 @@ export type Selection = { kind: 'person'; id: string } | { kind: 'marriage'; id:
 export function SidePanel({ selection, onSelect }: { selection: Selection; onSelect: (s: Selection) => void }) {
   const { t, lang } = useLang()
   const g = useGraph()
+  const [addingSpouse, setAddingSpouse] = useState<string | null>(null)
 
   if (!selection) {
     return (
@@ -47,6 +50,19 @@ export function SidePanel({ selection, onSelect }: { selection: Selection; onSel
             )
           })}
         </ul>
+        <button type="button" className="btn" onClick={() => setAddingSpouse(person.id)}>
+          + {t(person.gender === 'M' ? 'addRelative.addWife' : 'addRelative.addHusband')}
+        </button>
+        {addingSpouse === person.id && (
+          <AddRelativeDialog
+            anchorId={person.id}
+            kind="spouse"
+            onClose={(id) => {
+              setAddingSpouse(null)
+              if (id) onSelect({ kind: 'person', id })
+            }}
+          />
+        )}
       </aside>
     )
   }

@@ -99,6 +99,8 @@ function CanvasInner({ editable, selection, onSelect, onOpenProfile, branchId, f
       addParent: t('addRelative.addParent'),
       addSibling: t('addRelative.addSibling'),
       addChild: t('addRelative.addChild'),
+      addWife: t('addRelative.addWife'),
+      addHusband: t('addRelative.addHusband'),
     }),
     [t],
   )

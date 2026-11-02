@@ -158,6 +158,8 @@ fieldset.date-input legend { font-size: .85rem; color: var(--muted); padding: 0 
 .add-bottom { left: 50%; bottom: -26px; transform: translateX(-50%); }
 .add-start { top: 50%; inset-inline-end: calc(100% + 6px); transform: translateY(-50%); }
 .add-end { top: 50%; inset-inline-start: calc(100% + 6px); transform: translateY(-50%); }
+/* The "+" pills reach over neighbouring diamonds: keep the hovered or selected person on top so they stay clickable. */
+.react-flow__node-person:hover, .react-flow__node-person.selected, .react-flow__node-person:focus-within { z-index: 1000 !important; }
 .union-node { border-radius: 50%; border: 2.5px solid var(--status-unconfirmed); background: var(--surface); display: grid; place-items: center; font-size: .8rem; position: relative; cursor: pointer; }
 .union-node.status-Verified { border-color: var(--status-verified); }
 .union-node.status-OralAccount { border-color: var(--status-oral); border-style: dashed; }

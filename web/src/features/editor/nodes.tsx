@@ -15,9 +15,9 @@ export type PersonNodeData = {
   isMe: boolean
   dimmed: boolean
   editable: boolean
-  labels: { parents: string; sibling: string; children: string; addParent: string; addSibling: string; addChild: string }
-  /** "+" on a point: add a new parent / sibling / child. */
-  onAdd?: (personId: string, kind: 'parent' | 'sibling' | 'child') => void
+  labels: { parents: string; sibling: string; children: string; addParent: string; addSibling: string; addChild: string; addWife: string; addHusband: string }
+  /** "+" on a point: add a new parent / sibling / spouse / child. */
+  onAdd?: (personId: string, kind: 'parent' | 'sibling' | 'spouse' | 'child') => void
 }
 export type UnionNodeData = { marriage: Marriage; verdict: DropVerdict; dimmed: boolean }
 export type PersonFlowNode = Node<PersonNodeData, 'person'>
@@ -59,7 +59,7 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
         <>
           <AddButton side="top" label={labels.addParent} onClick={() => onAdd(person.id, 'parent')} />
           <AddButton side="start" label={labels.addSibling} onClick={() => onAdd(person.id, 'sibling')} />
-          <AddButton side="end" label={labels.addSibling} onClick={() => onAdd(person.id, 'sibling')} />
+          <AddButton side="end" label={person.gender === 'M' ? labels.addWife : labels.addHusband} onClick={() => onAdd(person.id, 'spouse')} />
           <AddButton side="bottom" label={labels.addChild} onClick={() => onAdd(person.id, 'child')} />
         </>
       )}
