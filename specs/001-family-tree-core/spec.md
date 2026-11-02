@@ -118,10 +118,12 @@ two grandchildren) using only the canvas, with no forms outside it. Confirm the 
 11. **Given** any person, **When** the admin drags them to an empty spot, **Then** they stay where dropped (the marriage
     ring follows its spouses), and **Auto-arrange** restores the automatic layout.
 12. **Given** the admin hovers (or selects) a diamond, **When** they click the "+" beside a point (top = **Add parent**,
-    sides = **Add sibling**, bottom = **Add child**), **Then** a short form asks for the essentials (father/mother,
-    brother/sister or son/daughter; names; birth and death year; for a child, which marriage), creates the person and the
-    relationship in one undoable step, and opens the new person in the side panel where all other properties can be
-    filled in later. A second parent added this way completes the "other parent unknown" marriage.
+    left side = **Add sibling**, right side = **Add wife** / **Add husband**, bottom = **Add child**), **Then** a short form
+    asks for the essentials (father/mother, brother/sister or son/daughter; names; birth and death year; for a child, the
+    mother or father: an existing spouse, **New wife… / New husband…**, or unknown), creates the person and the
+    relationship (and a new spouse's marriage) in one undoable step, and opens the new person in the side panel where all
+    other properties can be filled in later. A second parent added this way completes the "other parent unknown" marriage.
+    The side panel of a selected person also offers **+ Add wife / + Add husband**.
 5. **Given** any change, **When** the admin presses Undo, **Then** the last change is reversed.
 6. **Given** quick entry "Fatimah bint Muhammad ibn Abdullah", **When** submitted, **Then** the system creates or
    matches Fatimah, Muhammad and Abdullah and links them father-to-child (asking which existing person to use if a
@@ -151,6 +153,9 @@ and navigates up to the great-grandfather and then across to a half-uncle from a
    and opens full-screen.
 6. **Given** an installed app that has opened a tree before, **When** the phone is offline, **Then** the last viewed tree,
    profiles, and ancestor view open read-only with an "Offline" notice.
+7. **Given** the prototype (no sign-in yet), **When** the tester opens the profile icon and picks **Member**, **Then** the
+   Editor, the "New source" form and the Open / Reset / Load demo actions disappear and the tree opens view-only; picking
+   **Admin** brings them back. The choice is remembered in that browser.
 
 ---
 
@@ -332,9 +337,10 @@ two updates and one creation; after commit the tree reflects them and history at
 - **FR-046**: Each person MUST be drawn as a diamond with connectors: top = parents, left/right = siblings, bottom =
   children. Dragging from a connector to another person MUST create that relationship (asking which marriage when the
   parent has several, with "other parent unknown" as an option).
-- **FR-048**: Hovering or selecting a diamond MUST show "+" actions at its points (Add parent / Add sibling / Add child)
-  that open a short form for the essentials and create the person and relationship in one step; the new person's
-  remaining properties MUST be editable afterwards.
+- **FR-048**: Hovering or selecting a diamond MUST show "+" actions at its points (Add parent / Add sibling /
+  Add wife or husband / Add child) that open a short form for the essentials and create the person and relationship in
+  one step; adding a child MUST let the admin pick the other parent from the existing spouses, create a new spouse in the
+  same step, or leave the other parent unknown. The new person's remaining properties MUST be editable afterwards.
 - **FR-047**: Admins MUST be able to drag people freely to arrange the tree (positions are kept), restore the automatic
   layout, and move a child's relationship to other parents by dragging (Move here / Add as alternative claim).
 - **FR-017**: Admins MUST be able to undo and redo their changes within a session.
@@ -362,6 +368,9 @@ two updates and one creation; after commit the tree reflects them and history at
 - **FR-026**: Each tree MUST have a visibility setting chosen by its Owner: Private (default, members only) or Public
   (anyone can view). In a public tree, living people MUST appear only as "Living person" with no dates or details to visitors.
 - **FR-027**: Every change MUST be recorded in a history showing the user, time and before/after values.
+- **FR-049**: Until sign-in exists (Phase 0 prototype), a profile icon in the app header MUST let a tester switch between
+  **Admin** (edit) and **Member** (view only), remembered per browser. As Member, no editing controls are shown and edits
+  are refused. This is a testing aid only, not access control; it is replaced by the signed-in user's role (FR-024).
 
 **Evidence, verification and competing claims**
 
@@ -485,6 +494,13 @@ two updates and one creation; after commit the tree reflects them and history at
   drag and drop to arrange people and to move relationships.
 - Q: Adding relatives from a point? → A: Hovering a point shows "+ Add …"; clicking asks for the essentials; the rest is
   edited later in the side panel.
+
+### Session 2026-11-02
+
+- Q: Where is a wife added? → A: "+ Add wife / Add husband" at the diamond's right point and in the side panel; "+ Add
+  child" asks for the mother (or father), including "New wife… / New husband…", created in the same step.
+- Q: How are roles tried before sign-in exists? → A: A profile icon switches the prototype between Admin and Member
+  (view only); the backend's sign-in and per-tree roles (FR-024) replace it.
 
 ## Assumptions
 

@@ -111,7 +111,8 @@ backend/
 web/                               # the single React PWA
 ├── public/                        # icons (192/512 maskable), robots.txt
 ├── src/
-│   ├── app/                       # router, providers, i18n/RTL, responsive shell (desktop / phone layouts)
+│   ├── app/                       # router, providers, i18n/RTL, responsive shell (desktop / phone layouts),
+│   │                              # role.ts + ProfileMenu.tsx (Phase 0 Admin/Member switch, FR-049)
 │   ├── data/                      # DataSource interface; Phase 0: LocalStore (in-browser) + sampleFamily.ts;
 │   │                              # Phase 4+: ApiStore (openapi-fetch) — screens depend only on the interface
 │   ├── domain/                    # TS rule ports for Phase 0 + client pre-validation later (rules, nasab, normalize)
@@ -155,6 +156,12 @@ rewriting the UI.
 6. **Redaction first** (C1): `Common/Redactor` in Phase 2; anonymous access denied until then.
 7. **PWA** (R29): shell precache; per-user IndexedDB query cache; photo runtime cache; cleared on logout.
 8. **Same origin** (R30): the API serves `web/dist`; dev uses the Vite proxy.
+9. **Prototype role switch** (FR-049, Phase 0 only): `web/src/app/role.ts` keeps the tester's role (`admin` | `member`,
+   localStorage `bayrab-role`, default admin) and `web/src/app/ProfileMenu.tsx` shows it as a profile icon in the header
+   (desktop top bar, phone header). Screens read `useRole()`: Member gets no Editor route (redirected to the view-only
+   Tree), no "New source" form and no Open / Reset / Load demo; the store's `run` / `replace` / undo / redo refuse writes
+   as Member. In Phase 2+ `useRole()` reads the signed-in user's role from `GetMe` and the switch is removed; the server
+   (`Common/TreeAuthorization`) is the real gate.
 
 ## Complexity Tracking
 

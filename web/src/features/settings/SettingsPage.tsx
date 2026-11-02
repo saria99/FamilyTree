@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { setLanguage, useLang } from '../../app/i18n'
+import { canEdit, useRole } from '../../app/role'
 import { useStoreApi, useTreeData } from '../../app/store'
 import { downloadTree, readTreeFile } from '../../data/jsonFile'
 import { createSampleFamily } from '../../data/sampleFamily'
@@ -12,6 +13,7 @@ export function SettingsPage() {
   const { t, lang } = useLang()
   const data = useTreeData()
   const { replace } = useStoreApi()
+  const editor = canEdit(useRole())
   const fileInput = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -31,40 +33,44 @@ export function SettingsPage() {
         <h2>{t('settings.data')}</h2>
         <div className="stack">
           <button className="btn" onClick={() => downloadTree(data)}>{t('settings.download')}</button>
-          <button className="btn" onClick={() => fileInput.current?.click()}>{t('settings.open')}</button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              e.target.value = ''
-              if (!file) return
-              try {
-                replace('Open file', await readTreeFile(file))
-                setMessage(t('settings.opened'))
-              } catch (err) {
-                setMessage(t('settings.openFailed', { error: (err as Error).message }))
-              }
-            }}
-          />
-          <button
-            className="btn danger"
-            onClick={() => {
-              if (window.confirm(t('settings.resetConfirm'))) replace('Reset to seed', createBayrabSeed())
-            }}
-          >
-            {t('settings.reset')}
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              if (window.confirm(t('settings.resetConfirm'))) replace('Load demo family', createSampleFamily())
-            }}
-          >
-            {t('settings.loadDemo')}
-          </button>
+          {editor && (
+            <>
+              <button className="btn" onClick={() => fileInput.current?.click()}>{t('settings.open')}</button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (!file) return
+                  try {
+                    replace('Open file', await readTreeFile(file))
+                    setMessage(t('settings.opened'))
+                  } catch (err) {
+                    setMessage(t('settings.openFailed', { error: (err as Error).message }))
+                  }
+                }}
+              />
+              <button
+                className="btn danger"
+                onClick={() => {
+                  if (window.confirm(t('settings.resetConfirm'))) replace('Reset to seed', createBayrabSeed())
+                }}
+              >
+                {t('settings.reset')}
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  if (window.confirm(t('settings.resetConfirm'))) replace('Load demo family', createSampleFamily())
+                }}
+              >
+                {t('settings.loadDemo')}
+              </button>
+            </>
+          )}
           {message && <p className="small" role="status">{message}</p>}
         </div>
       </section>

@@ -48,3 +48,12 @@ test('without ?seed=demo the Bayrab seed loads: founder P-0001', async ({ page }
   await expect(page.getByText('Chat report SRC-CHAT-001')).toBeVisible()
   await page.screenshot({ path: 'test-results/phone-bayrab-founder.png', fullPage: true })
 })
+
+test('phone header has the profile icon; switching to Member keeps viewing available', async ({ page }) => {
+  await page.goto('/?seed=demo#/lineage')
+  await page.getByRole('button', { name: /الملف الشخصي والدور/ }).click()
+  await page.getByRole('menuitemradio', { name: /عضو/ }).click()
+  await expect(page.getByRole('button', { name: /الملف الشخصي والدور: عضو/ })).toBeVisible()
+  await expect(page.locator('.nasab.big')).toBeVisible()
+  await page.screenshot({ path: 'test-results/phone-member.png' })
+})

@@ -66,6 +66,10 @@ const en = {
   rules: { refusedTitle: 'Not allowed', warningTitle: 'Please confirm', warningBody: 'These look unusual. Save anyway? Your confirmation is stored with the record.', saveAnyway: 'Save anyway' },
   search: { placeholder: 'Search by name (Arabic or English) or ID', none: 'No matches' },
   lineage: { title: 'My lineage', pick: 'Choose whose lineage to show', wives: 'Wives', showTree: 'Show as tree' },
+  role: {
+    menu: 'Profile and role', viewingAs: 'Viewing as', admin: 'Admin', adminHint: 'Builds and edits the tree', member: 'Member', memberHint: 'View only',
+    note: 'Prototype: switch roles to try both experiences. Real sign-in comes later.',
+  },
   settings: {
     language: 'Language', data: 'Data', download: 'Download tree (JSON)', open: 'Open JSON file', reset: 'Reset to Bayrab seed', loadDemo: 'Load demo family (fictional)',
     resetConfirm: 'Replace the current tree? (You can undo.)', opened: 'Tree loaded from file.', openFailed: 'Could not open this file: {{error}}',
@@ -141,6 +145,10 @@ const ar: Resources = {
   rules: { refusedTitle: 'غير مسموح', warningTitle: 'يرجى التأكيد', warningBody: 'تبدو هذه غير معتادة. هل تحفظ على أي حال؟ يُحفظ تأكيدك مع السجل.', saveAnyway: 'احفظ على أي حال' },
   search: { placeholder: 'ابحث بالاسم (عربي أو إنجليزي) أو الرقم', none: 'لا نتائج' },
   lineage: { title: 'نسبي', pick: 'اختر الشخص لعرض نسبه', wives: 'الزوجات', showTree: 'عرض كشجرة' },
+  role: {
+    menu: 'الملف الشخصي والدور', viewingAs: 'تتصفح بصفة', admin: 'مشرف', adminHint: 'يبني الشجرة ويعدّلها', member: 'عضو', memberHint: 'عرض فقط',
+    note: 'نموذج تجريبي: بدّل الدور لتجربة الحالتين. تسجيل الدخول الفعلي لاحقًا.',
+  },
   settings: {
     language: 'اللغة', data: 'البيانات', download: 'تنزيل الشجرة (JSON)', open: 'فتح ملف JSON', reset: 'إعادة بيانات بيرب الأولية', loadDemo: 'تحميل عائلة تجريبية (وهمية)',
     resetConfirm: 'استبدال الشجرة الحالية؟ (يمكن التراجع)', opened: 'تم تحميل الشجرة من الملف.', openFailed: 'تعذر فتح الملف: {{error}}',

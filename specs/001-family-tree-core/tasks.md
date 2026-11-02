@@ -97,6 +97,14 @@ On phone: install to home screen; the ancestor view opens; search "عبد الل
 - [x] T125 [US3] Free arrangement (positions kept in the tree data, rings follow spouses, Auto-arrange) and re-shifting (Move here / Add as alternative) with Playwright coverage in `web/tests/desktop.spec.ts`
 
 - [x] T126 [US3] "+" actions at the diamond points (Add parent / sibling / child) with a short form, one-step create + link (`addRelative`), new person opened in the side panel; parent fills the unknown slot — `web/src/features/editor/AddRelativeDialog.tsx`, Playwright coverage
+- [x] T127 [US1] Add a wife/husband: right-hand "+" on the diamond and "+ Add wife" in the side panel; "+ Add child" asks for the mother/father with "New wife… / New husband…" (spouse, marriage and child in one undo step) — `addRelative(kind: 'spouse' | otherParent)` in `web/src/data/commands.ts`, `AddRelativeDialog.tsx`, Playwright coverage
+
+### Phase 0 revisions (2026-11-02): role switch for testing (FR-049)
+
+- [x] T128 [US5] Role store `useRole()` / `setRole()` (`admin` | `member`, localStorage `bayrab-role`, default admin) in `web/src/app/role.ts`; `run` / `replace` / undo / redo in `web/src/app/store.tsx` refuse writes as Member
+- [x] T129 [US5] `ProfileMenu`: round profile icon at the end of the desktop top bar and in a slim phone header; menu "Viewing as" with Admin / Member (view only) radio items and a "prototype only" note; ar/en strings in `web/src/app/i18n.ts`
+- [x] T130 [US4] Member view: desktop nav shows Tree instead of Editor, `/editor` redirects to `/tree`; Sources hides "New source"; Settings hides Open / Reset / Load demo in `web/src/app/App.tsx`, `web/src/features/evidence/SourcesPage.tsx`, `web/src/features/settings/SettingsPage.tsx`
+- [x] T131 [P] [US4] Playwright: switch to Member → no Editor, no "+" actions, no New source, no Reset; reload keeps Member; switch back to Admin restores editing, in `web/tests/roles.spec.ts` (+ phone check in `phone.spec.ts`)
 
 **Checkpoint (STOP)**: Collect feedback. Update spec.md/plan.md with what changed before starting Phase 1.
 

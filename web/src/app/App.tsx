@@ -8,6 +8,8 @@ import { LineagePage } from '../features/viewer/LineagePage'
 import { ProfilePage } from '../features/viewer/Profile'
 import { TreePage } from '../features/viewer/TreePage'
 import { useLang } from './i18n'
+import { ProfileMenu } from './ProfileMenu'
+import { canEdit, useRole } from './role'
 import { StoreProvider } from './store'
 import { useIsPhone } from './useIsPhone'
 
@@ -25,13 +27,14 @@ export function App() {
 function Shell() {
   const { t } = useLang()
   const isPhone = useIsPhone()
+  const editor = canEdit(useRole())
   const desktopNav = [
-    ['/editor', t('nav.editor')],
+    editor ? (['/editor', t('nav.editor')] as const) : (['/tree', t('nav.tree')] as const),
     ['/lineage', t('nav.lineage')],
     ['/sources', t('nav.sources')],
     ['/search', t('nav.search')],
     ['/settings', t('nav.settings')],
-  ] as const
+  ]
   const phoneNav = [
     ['/lineage', t('nav.lineage'), '🌿'],
     ['/tree', t('nav.tree'), '🌳'],
@@ -51,12 +54,19 @@ function Shell() {
               <NavLink key={to} to={to}>{label}</NavLink>
             ))}
           </nav>
+          <ProfileMenu />
+        </header>
+      )}
+      {isPhone && (
+        <header className="phone-header">
+          <span className="brand">{t('appName')}</span>
+          <ProfileMenu />
         </header>
       )}
       <main className="main">
         <Routes>
-          <Route path="/" element={<Navigate to={isPhone ? '/lineage' : '/editor'} replace />} />
-          <Route path="/editor" element={<EditorPage />} />
+          <Route path="/" element={<Navigate to={isPhone ? '/lineage' : editor ? '/editor' : '/tree'} replace />} />
+          <Route path="/editor" element={editor ? <EditorPage /> : <Navigate to="/tree" replace />} />
           <Route path="/lineage" element={<LineagePage />} />
           <Route path="/tree" element={<TreePage />} />
           <Route path="/search" element={<SearchPage />} />

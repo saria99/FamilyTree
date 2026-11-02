@@ -5,6 +5,7 @@ import { LocalStore } from '../data/LocalStore'
 import { FamilyGraph } from '../domain/graph'
 import { describe, violations, warnings, type RuleResult } from '../domain/rules'
 import { useLang } from './i18n'
+import { canEdit, getRole } from './role'
 
 const store = new LocalStore()
 
@@ -31,6 +32,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const api = useMemo<StoreApi>(
     () => ({
       run: async (label, command) => {
+        // Prototype Member role (FR-049): view only.
+        if (!canEdit(getRole())) return false
         const first = command([])
         if (first.ok) {
           store.commit(label, first.data)
@@ -51,9 +54,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         store.commit(label, second.data)
         return second.createdId
       },
-      undo: store.undo,
-      redo: store.redo,
-      replace: (label, data) => store.replace(label, data),
+      undo: () => canEdit(getRole()) && store.undo(),
+      redo: () => canEdit(getRole()) && store.redo(),
+      replace: (label, data) => canEdit(getRole()) && store.replace(label, data),
     }),
     [ask],
   )
