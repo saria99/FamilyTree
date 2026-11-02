@@ -1,8 +1,10 @@
 name: Deploy prototype to GitHub Pages
 
+# Builds on every listed branch; publishes only from the repo's default branch, because the github-pages
+# environment accepts deployments from the default branch only.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, '001-*']
   workflow_dispatch:
 
 permissions:
@@ -39,6 +41,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     environment:
       name: github-pages
